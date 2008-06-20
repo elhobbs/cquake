@@ -68,7 +68,7 @@ int net_numdrivers = 2;
 
 #else
 
-int net_numdrivers = 2;
+int net_numdrivers = 1;
 
 #endif
 
