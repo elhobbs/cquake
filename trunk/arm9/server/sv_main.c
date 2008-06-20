@@ -1176,6 +1176,6 @@ void SV_SpawnServer (char *server)
 			SV_SendServerinfo (host_client);
 	
 	Con_Printf ("Server spawned.\n");
-	show_overlay(false,true);
+	show_overlay(false,false);
 }
 

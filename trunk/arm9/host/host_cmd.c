@@ -673,7 +673,7 @@ void Host_Loadgame_f (void)
 		CL_EstablishConnection ("local");
 		Host_Reconnect_f ();
 	}
-	show_overlay(false,true);
+	show_overlay(false,false);
 cleanup:
 	if(str)
 		free(str);
