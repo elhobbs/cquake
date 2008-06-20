@@ -280,7 +280,7 @@ void Key_Message (int key)
 		key_dest = key_game;
 		chat_bufferlen = 0;
 		chat_buffer[0] = 0;
-		show_overlay(false,true);
+		show_overlay(false,false);
 		return;
 	}
 

@@ -303,7 +303,7 @@ void M_Main_Key (int key)
 	{
 	case K_NDS_B:
 	case K_ESCAPE:
-	show_overlay(false,true);
+	show_overlay(false,false);
 	//memset(vid.conbuffer,0,vid.conwidth*vid.conheight);
 	//Con_Printf("hide\n");
 		key_dest = key_game;

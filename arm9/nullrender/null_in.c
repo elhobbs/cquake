@@ -192,8 +192,77 @@ void IN_Shutdown (void)
 IN_Move
 =======
 */
+#ifdef NDS
+touchPosition	g_lastTouch  = { 0,0,0,0 };
+touchPosition	g_currentTouch = { 0,0,0,0 };
+#endif
+
 void IN_Move (usercmd_t *cmd)
 {
+#ifdef NDS
+	int dx,dy;
+	scanKeys();
+	if (keysDown() & KEY_TOUCH)
+	{
+		g_lastTouch = touchReadXY();
+		g_lastTouch.px <<= 7;
+		g_lastTouch.py <<= 7;
+	}
+	if(keysHeld() & KEY_TOUCH)
+	{
+		g_currentTouch = touchReadXY();
+		// let's use some fixed point magic to improve touch smoothing accuracy
+		g_currentTouch.px <<= 7;
+		g_currentTouch.py <<= 7;
+
+		dx = (g_currentTouch.px - g_lastTouch.px) >> 6;
+		dy = (g_currentTouch.py - g_lastTouch.py) >> 6;
+
+		// filtering too long strokes, if needed
+		//if((dx < 30) && (dy < 30) && (dx > -30) && (dy > -30))
+		//{
+			// filter too small strokes, if needed
+			//if((dx > -2) && (dx < 2))
+			//	dx = 0;
+
+			// filter too small strokes, if needed
+			//if((dy > -1) && (dy < 1))
+			//	dy = 0;
+			
+			dx *= sensitivity.value;
+			dy *= sensitivity.value;
+			
+			// add mouse X/Y movement to cmd
+			if ( (in_strafe.state & 1) || (lookstrafe.value && (in_mlook.state & 1) ))
+				cmd->sidemove += m_side.value * dx;
+			else
+				cl.viewangles[YAW] -= m_yaw.value * dx;
+
+			//if (in_mlook.state & 1)
+				V_StopPitchDrift ();
+				
+			if (/* (in_mlook.state & 1) &&*/ !(in_strafe.state & 1))
+			{
+				cl.viewangles[PITCH] += m_pitch.value * dy;
+				if (cl.viewangles[PITCH] > 80)
+					cl.viewangles[PITCH] = 80;
+				if (cl.viewangles[PITCH] < -70)
+					cl.viewangles[PITCH] = -70;
+			}
+			else
+			{
+				if ((in_strafe.state & 1) && noclip_anglehack)
+					cmd->upmove -= m_forward.value * dy;
+				else
+					cmd->forwardmove -= m_forward.value * dy;
+			}
+		//}
+
+		// some simple averaging / smoothing through weightened (.5 + .5) accumulation
+		g_lastTouch.px = (g_lastTouch.px + g_currentTouch.px) / 2;
+		g_lastTouch.py = (g_lastTouch.py + g_currentTouch.py) / 2;
+	}
+#endif
 }
 
 /*
