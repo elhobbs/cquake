@@ -1202,11 +1202,11 @@ void Sys_Init()
 		int i;
 		Con_Printf("Wifi_AutoConnect...");
 		Wifi_AutoConnect(); // request connect
-		Con_Printf("%d.",i);
+		//Con_Printf("%d.",i);
 		while(1) {
-			Con_Printf("Wifi_AssocStatus...");
+			//Con_Printf("Wifi_AssocStatus...");
 			i=Wifi_AssocStatus(); // check status
-			Con_Printf("%d.",i);
+			//Con_Printf("%d.",i);
 			if(i==ASSOCSTATUS_ASSOCIATED) {
 				Con_Printf("Connected successfully!\n");
 				break;
@@ -1218,7 +1218,7 @@ void Sys_Init()
 			}
 			else
 			{
-				Con_Printf("wifi: %d\n",i);
+				//Con_Printf("wifi: %d\n",i);
 			}
 		}
 	} // if connected, you can now use the berkley sockets interface to connect to the internet!
