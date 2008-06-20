@@ -860,7 +860,11 @@ void read_cquake_ini(quakeparms_t    *parms)
 
 	lpCmdLine = &cmdLine[0];
 	memset(lpCmdLine,0,sizeof(cmdLine));
+#ifdef USE_WIFI
+	f = fopen("cquake_mp.ini","r");
+#else
 	f = fopen("cquake.ini","r");
+#endif
 	if(f)
 	{
 		cb = fread(&cmdLine[0],1,MAX_CMD_LINE,f);
