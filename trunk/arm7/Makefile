@@ -29,7 +29,8 @@ CFLAGS	:=	-g -Wall -O2\
 		-ffast-math \
 		$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM7 -DUSE_WIFI
+CFLAGS	+=	$(INCLUDE) -DARM7 
+#CFLAGS  +=  -DUSE_WIFI
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions -fno-rtti
 
 

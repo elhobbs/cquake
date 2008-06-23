@@ -56,11 +56,14 @@ static int			lowshift;
 void Sys_Wait(float t);
 void waitforit(void)
 {
-//return;
+
+	if(developer.value)
+	{
 	Con_Printf("\nwait for it...");
 	while((KEYS_CUR & KEY_A) == 0);
 	Con_Printf("done.\n");
 	Sys_Wait(0.2f);
+	}
 }
 #else
 void waitforit(void)
@@ -508,25 +511,35 @@ void Sys_mkdir (char *path)
 
 void show_overlay(qboolean show,qboolean showkeys)
 {
-	if(show)
-	{
 #ifdef NDS
-	BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_1;
-	BG0_CR = BG_PRIORITY_2;
+	if(1 || show)
+	{
+		BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_1;
+		BG0_CR &= (~BG_PRIORITY_3);
+		BG0_CR |= BG_PRIORITY_2;
+#if 1
+extern u16 *ds_display_bottom;
+extern int ds_display_bottom_height;
+		if(vid.buffer && !cl.intermission)
+		{
+			Con_Printf("clearing vmem\n");
+			memset(((u16*)BG_BMP_RAM(2)), 0,vid.width*vid.height);
+			memset(vid.buffer,0,vid.width*vid.height);
+		}
 #endif
 	}
 	else
 	{
-#ifdef NDS
-	BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_2;
-	BG0_CR = BG_PRIORITY_1;
-#endif
+		BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_2;
+		BG0_CR = BG_PRIORITY_1;
 	}
+#endif
+
 #ifdef NDS
 	int i;
 	for(i=0;i<32*32;i++)
 	{
-		((u16*)SCREEN_BASE_BLOCK(8))[i] = (u16)' ';
+		((u16*)SCREEN_BASE_BLOCK(15))[i] = (u16)' ';
 	}
 #endif
 	if(showkeys)
@@ -566,6 +579,9 @@ void Sys_Error (char *error, ...)
 	va_end (argptr);
 	printf ("\n");
 
+#ifdef NDS
+	BG1_CR &= (~BG_PRIORITY_3);
+#endif
 	exit (1);
 }
 
@@ -1081,6 +1097,10 @@ void IPC_Wifi(u32 command, const u32 *data, u32 wordCount)
 #endif
 
 extern const u8 default_font_bin[];
+u16		*ds_display_top; 
+u16		*ds_display_bottom;
+int		ds_display_bottom_height;
+u16		*ds_display_menu; 
 
 void Sys_Init()
 {
@@ -1092,27 +1112,24 @@ void Sys_Init()
 	//put 3D on top
 	lcdMainOnTop();
 	
-	/*vramSetBankA(VRAM_A_LCD);
-	vramSetBankB(VRAM_B_LCD);
-	vramSetBankC(VRAM_C_LCD);
-	vramSetBankD(VRAM_D_LCD);
-	vramSetBankE(VRAM_E_LCD);
+    vramSetMainBanks(VRAM_A_TEXTURE, VRAM_B_TEXTURE, VRAM_C_TEXTURE, VRAM_D_TEXTURE);
+	vramSetBankE(VRAM_E_MAIN_BG);
 	vramSetBankF(VRAM_F_TEX_PALETTE);
-	vramSetBankH(VRAM_H_LCD);
-	vramSetBankI(VRAM_I_LCD);*/
+	vramSetBankG((VRAM_G_TYPE)(1 | VRAM_OFFSET(2)));
+	vramSetBankH(VRAM_H_SUB_BG); 
+	vramSetBankI(VRAM_I_SUB_BG); 
 
 	// Subscreen as a console
-	videoSetModeSub(MODE_3_2D | DISPLAY_BG0_ACTIVE);// | DISPLAY_BG3_ACTIVE);
-	/*vramSetBankH(VRAM_H_SUB_BG); 
-	SUB_BG3_CR = BG_BMP8_128x128 | BG_BMP_BASE(0) | BG_PRIORITY_1;
+	videoSetModeSub(MODE_5_2D | DISPLAY_BG0_ACTIVE/* | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE*/);
 	
-	SUB_BG3_XDX = 1<<7;
- 	SUB_BG3_YDY = 1<<7;
- 	SUB_BG3_XDY = 0;
- 	SUB_BG3_YDX = 0;
- 	SUB_BG3_CX = 0;
- 	SUB_BG3_CY = 0;
-
+/*
+	SUB_BG2_CR = BG_BMP8_128x128 | BG_TILE_BASE(0) | BG_PRIORITY_1;
+	SUB_BG2_XDX = 1<<8;
+ 	SUB_BG2_YDY = 1<<8;
+ 	SUB_BG2_XDY = 0;
+ 	SUB_BG2_YDX = 0;
+ 	SUB_BG2_CX = 0;
+ 	SUB_BG2_CY = -64<<8;
 	for (y=0; y < 128; y++)
 	{
 		for (x=0; x < 64; x++)
@@ -1123,24 +1140,45 @@ void Sys_Init()
 			
 			((u16*)BG_BMP_RAM_SUB(0))[y * 64 + x] = two_pixels;
 		}
-	}*/
-	vramSetBankI(VRAM_I_SUB_BG); 
-	//SUB_BG0_CR = BG_MAP_BASE(24);
+	}
+	SUB_BG3_CR = BG_BMP8_128x128 | BG_TILE_BASE(2) | BG_PRIORITY_1;
+	SUB_BG3_XDX = 1<<8;
+ 	SUB_BG3_YDY = 1<<8;
+ 	SUB_BG3_XDY = 0;
+ 	SUB_BG3_YDX = 0;
+ 	SUB_BG3_CX = -128<<8;
+ 	SUB_BG3_CY = -64<<8;
+	for (y=0; y < 128; y++)
+	{
+		for (x=0; x < 64; x++)
+		{
+			u8 first_pixel 	= y;
+			u8 second_pixel = y + 1;
+			u16 two_pixels = first_pixel | (second_pixel << 8);
+			
+			((u16*)BG_BMP_RAM_SUB(2))[y * 64 + x] = two_pixels;
+		}
+	}
+*/
+
+	videoSetMode(MODE_3_3D | DISPLAY_BG1_ACTIVE | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
+
+#if 1
+	BG0_CR |= BG_PRIORITY_3;
+	BG1_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(14) | BG_TILE_BASE(0) | BG_PRIORITY_0;
+	consoleInitDefault((u16*)SCREEN_BASE_BLOCK(14), (u16*)CHAR_BASE_BLOCK(0), 16);
+	BG_PALETTE[0]=0;	
+	BG_PALETTE[255]=0xff00;
+#else
 	SUB_BG0_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(23) | BG_TILE_BASE(2) | BG_PRIORITY_0;
-	//consoleInit((u16*)default_font_bin, (u16*)CHAR_BASE_BLOCK_SUB(0), 128, 0, (u16*)SCREEN_BASE_BLOCK_SUB(7), CONSOLE_USE_COLOR255, 16);
-	consoleInitDefault((u16*)SCREEN_BASE_BLOCK_SUB(23), (u16*)CHAR_BASE_BLOCK_SUB(2), 16);
 	BG_PALETTE_SUB[0]=0;	
 	BG_PALETTE_SUB[255]=0xff00;
-#if 0
-	videoSetMode(MODE_3_3D);
-    vramSetMainBanks(VRAM_A_TEXTURE, VRAM_B_TEXTURE, VRAM_C_TEXTURE, VRAM_D_TEXTURE);
-#else
-	videoSetMode(MODE_3_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
-    vramSetMainBanks(VRAM_A_TEXTURE, VRAM_B_TEXTURE, VRAM_C_TEXTURE, VRAM_D_TEXTURE);
-	vramSetBankE(VRAM_E_MAIN_BG);
-	vramSetBankG((VRAM_G_TYPE)(1 | VRAM_OFFSET(2)));
+	consoleInitDefault((u16*)SCREEN_BASE_BLOCK_SUB(23), (u16*)CHAR_BASE_BLOCK_SUB(2), 16);
+#endif
+
+	BG2_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(15) | BG_TILE_BASE(0) | BG_PRIORITY_0;
+
 	BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_1;
-	
 	BG3_XDX = 1<<8;
  	BG3_YDY = 1<<8;
  	BG3_XDY = 0;
@@ -1159,19 +1197,11 @@ void Sys_Init()
 			((u16*)BG_BMP_RAM(2))[y * 128 + x] = two_pixels;
 		}
 	}
-#if 1
-	BG2_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(8) | BG_TILE_BASE(0) | BG_PRIORITY_0;
-	//consoleInitDefault((u16*)SCREEN_BASE_BLOCK(15), (u16*)CHAR_BASE_BLOCK(0), 16);
 	
-	/*BG2_XDX = 1<<8;
- 	BG2_YDY = 1<<8;
- 	BG2_XDY = 0;
- 	BG2_YDX = 0;
- 	BG2_CX = 0;
- 	BG2_CY = 0;*/
-#endif
-	vramSetBankF(VRAM_F_TEX_PALETTE);
-#endif
+	ds_display_menu = ds_display_bottom = (u16*)BG_BMP_RAM(2);
+	ds_display_bottom_height = 192;
+	ds_display_top = (u16*)BG_BMP_RAM_SUB(0);
+
 
 	irqInit();
 	irqSet(IRQ_VBLANK, 0);

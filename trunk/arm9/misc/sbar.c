@@ -103,6 +103,10 @@ void Sbar_Changed (void)
 	sb_updates = 0;	// update next frame
 }
 
+void Sbar_InitRight()
+{
+
+}
 /*
 ===============
 Sbar_Init
@@ -498,6 +502,7 @@ void Sbar_DrawScoreboard (void)
 Sbar_DrawInventory
 ===============
 */
+extern int sbar_in_draw;
 void Sbar_DrawInventory (void)
 {
 	int		i;
@@ -535,12 +540,14 @@ void Sbar_DrawInventory (void)
 				flashon = (flashon%5) + 2;
 
          Sbar_DrawPic (i*24, -16, sb_weapons[flashon][i]);
+         //Sbar_DrawPic (8,(i*8) -(vid.conheight-SBAR_HEIGHT)+8, sb_weapons[flashon][i]);
 
 			if (flashon > 1)
 				sb_updates = 0;		// force update to remove flash
 		}
 	}
 
+	//168
 // MED 01/04/97
 // hipnotic weapons
     if (hipnotic)
@@ -612,7 +619,7 @@ void Sbar_DrawInventory (void)
 			}
 		}
 	}
-
+/*
 // ammo counts
 	for (i=0 ; i<4 ; i++)
 	{
@@ -624,10 +631,10 @@ void Sbar_DrawInventory (void)
 		if (num[2] != ' ')
 			Sbar_DrawCharacter ( (6*i+3)*8 - 2, -24, 18 + num[2] - '0');
 	}
-
+*/
 	flashon = 0;
    // items
-   for (i=0 ; i<6 ; i++)
+   for (i=0 ; i<4/*6*/ ; i++)
       if (cl.items & (1<<(17+i)))
       {
          time = cl.item_gettime[17+i];
@@ -703,7 +710,7 @@ void Sbar_DrawInventory (void)
 					sb_updates = 0;
 				}
 				else
-					Sbar_DrawPic (CON_SCREEN_WIDTH-32 + i*8, -16, sb_sigil[i]);
+					Sbar_DrawPic (CON_SCREEN_WIDTH-32 + i*8, -4, sb_sigil[i]);
 				if (time &&	time > cl.time - 2)
 					sb_updates = 0;
 			}
@@ -839,22 +846,22 @@ void Sbar_DrawFace (void)
 	if ( (cl.items & (IT_INVISIBILITY | IT_INVULNERABILITY) )
 	== (IT_INVISIBILITY | IT_INVULNERABILITY) )
 	{
-		Sbar_DrawPic (112, 0, sb_face_invis_invuln);
+		Sbar_DrawPic (104, 0, sb_face_invis_invuln);
 		return;
 	}
 	if (cl.items & IT_QUAD)
 	{
-		Sbar_DrawPic (112, 0, sb_face_quad );
+		Sbar_DrawPic (104, 0, sb_face_quad );
 		return;
 	}
 	if (cl.items & IT_INVISIBILITY)
 	{
-		Sbar_DrawPic (112, 0, sb_face_invis );
+		Sbar_DrawPic (104, 0, sb_face_invis );
 		return;
 	}
 	if (cl.items & IT_INVULNERABILITY)
 	{
-		Sbar_DrawPic (112, 0, sb_face_invuln);
+		Sbar_DrawPic (104, 0, sb_face_invuln);
 		return;
 	}
 
@@ -870,7 +877,7 @@ void Sbar_DrawFace (void)
 	}
 	else
 		anim = 0;
-	Sbar_DrawPic (112, 0, sb_faces[f][anim]);
+	Sbar_DrawPic (104, 0, sb_faces[f][anim]);
 }
 
 /*
@@ -878,7 +885,134 @@ void Sbar_DrawFace (void)
 Sbar_Draw
 ===============
 */
+int sbar_in_draw = 0;
 void Sbar_Draw (void)
+{
+	if (scr_con_current == vid.conheight)
+		return;		// console is full screen
+
+	if (sb_updates >= vid.numpages)
+		return;
+
+	scr_copyeverything = 1;
+
+	sb_updates++;
+
+	//if (sb_lines && vid.conwidth > CON_SCREEN_WIDTH) 
+		Draw_TileClear (0, vid.conheight - sb_lines, vid.conwidth, sb_lines);
+
+	if ( sb_lines > 24)
+	{
+		Sbar_DrawInventory ();
+		if (cl.maxclients != 1)
+			Sbar_DrawFrags ();
+	}
+
+	/*if (sb_showscores || cl.stats[STAT_HEALTH] <= 0)
+	{
+		Sbar_DrawPic (0, 0, sb_scorebar);
+		Sbar_DrawScoreboard ();
+		sb_updates = 0;
+	}
+	else */
+	if (sb_lines)
+	{
+		//Sbar_DrawPic (0, 0, sb_sbar);
+
+   // keys (hipnotic only)
+      //MED 01/04/97 moved keys here so they would not be overwritten
+      if (hipnotic)
+      {
+         if (cl.items & IT_KEY1)
+            Sbar_DrawPic (209, 3, sb_items[0]);
+         if (cl.items & IT_KEY2)
+            Sbar_DrawPic (209, 12, sb_items[1]);
+      }
+	  
+   // armor
+		if (cl.items & IT_INVULNERABILITY)
+		{
+			Sbar_DrawNum (32, 0, 666, 3, 1);
+			Sbar_DrawPic (0, 0, draw_disc);
+		}
+		else
+		{
+			if (rogue)
+			{
+				Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3,
+								cl.stats[STAT_ARMOR] <= 25);
+				if (cl.items & RIT_ARMOR3)
+					Sbar_DrawPic (0, 0, sb_armor[2]);
+				else if (cl.items & RIT_ARMOR2)
+					Sbar_DrawPic (0, 0, sb_armor[1]);
+				else if (cl.items & RIT_ARMOR1)
+					Sbar_DrawPic (0, 0, sb_armor[0]);
+			}
+			else
+			{
+				//Sbar_DrawNum (24, 0, cl.stats[STAT_ARMOR], 3
+				//, cl.stats[STAT_ARMOR] <= 25);
+				if (cl.items & IT_ARMOR3)
+					Sbar_DrawPic (8, 0, sb_armor[2]);
+				else if (cl.items & IT_ARMOR2)
+					Sbar_DrawPic (8, 0, sb_armor[1]);
+				else if (cl.items & IT_ARMOR1)
+					Sbar_DrawPic (8, 0, sb_armor[0]);
+			}
+		// health
+			Sbar_DrawNum (32, 0, cl.stats[STAT_HEALTH], 3
+			, cl.stats[STAT_HEALTH] <= 25);
+		}
+		
+
+
+
+	// face
+		Sbar_DrawFace ();
+
+	// ammo icon
+		if (rogue)
+		{
+			if (cl.items & RIT_SHELLS)
+				Sbar_DrawPic (224, 0, sb_ammo[0]);
+			else if (cl.items & RIT_NAILS)
+				Sbar_DrawPic (224, 0, sb_ammo[1]);
+			else if (cl.items & RIT_ROCKETS)
+				Sbar_DrawPic (224, 0, sb_ammo[2]);
+			else if (cl.items & RIT_CELLS)
+				Sbar_DrawPic (224, 0, sb_ammo[3]);
+			else if (cl.items & RIT_LAVA_NAILS)
+				Sbar_DrawPic (224, 0, rsb_ammo[0]);
+			else if (cl.items & RIT_PLASMA_AMMO)
+				Sbar_DrawPic (224, 0, rsb_ammo[1]);
+			else if (cl.items & RIT_MULTI_ROCKETS)
+				Sbar_DrawPic (224, 0, rsb_ammo[2]);
+		}
+		else
+		{
+			if (cl.items & IT_SHELLS)
+				Sbar_DrawPic (132, 0, sb_ammo[0]);
+			else if (cl.items & IT_NAILS)
+				Sbar_DrawPic (132, 0, sb_ammo[1]);
+			else if (cl.items & IT_ROCKETS)
+				Sbar_DrawPic (132, 0, sb_ammo[2]);
+			else if (cl.items & IT_CELLS)
+				Sbar_DrawPic (132, 0, sb_ammo[3]);
+		}
+
+		Sbar_DrawNum (152, 0, cl.stats[STAT_AMMO], 3,
+					  cl.stats[STAT_AMMO] <= 10);
+	}
+
+	if (vid.conwidth > CON_SCREEN_WIDTH) {
+		if (cl.gametype == GAME_DEATHMATCH)
+			Sbar_MiniDeathmatchOverlay ();
+	}
+	sbar_in_draw = 0;
+}
+
+#if 0
+void Sbar_Draw2 (void)
 {
 	if (scr_con_current == vid.conheight)
 		return;		// console is full screen
@@ -997,7 +1131,7 @@ void Sbar_Draw (void)
 			Sbar_MiniDeathmatchOverlay ();
 	}
 }
-
+#endif
 //=============================================================================
 
 /*

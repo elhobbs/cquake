@@ -254,16 +254,16 @@ void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect)
 
 	off = vid.height - r_refdef.vrect.height;
 #ifdef NDS
-#if 1
+#if 0
 	glViewport(r_refdef.vrect.x,
 		r_refdef.vrect.y + off,
 		r_refdef.vrect.x + r_refdef.vrect.width - 1,
 		r_refdef.vrect.y + off + r_refdef.vrect.height - 1);
 #else
-	glViewport(r_refdef.vrect.x,
-		r_refdef.vrect.y + off,
-		r_refdef.vrect.x + (r_refdef.vrect.width/2) - 1,
-		r_refdef.vrect.y + off + r_refdef.vrect.height - 1);
+	glViewport(0,
+		0,
+		vid.width-1,
+		vid.height-1);
 #endif
 	//glViewport (x, y2, w, h);
 	//glViewport(r_refdef.vrect.x,
@@ -724,7 +724,7 @@ extern uint32 ds_texture_pal;
 #ifdef NDS
 	glColor3b(232,232,232);
 	GFX_TEX_FORMAT = r_sky_bottom;
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(2));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1));
 #endif
 	EmitSkyPolys (fa,pts);
 
@@ -732,10 +732,11 @@ extern uint32 ds_texture_pal;
 	speedscale -= (int)speedscale & ~63 ;
 
 #ifdef NDS
-	glEnable(GL_BLEND);
+	//glEnable(GL_BLEND);
 	//glColorTable(GL_RGB32_A3,ds_alpha_pal);
 	GFX_TEX_FORMAT = r_sky_top;
-	glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (1<<11) | POLY_MODULATION);
+	//glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (0<<11) | POLY_MODULATION);
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11));
 #endif
 	EmitSkyPolys (fa,pts);
 #ifdef NDS
@@ -1302,9 +1303,10 @@ void R_EndFrame (void)
 	
 	Con_DPrintf("P: %d\n",p);
 	Con_DPrintf("V: %d\n",v);*/
+extern cvar_t		ds_flush;
 		// Pop our Matrix from the stack (restore state)
 		//glPopMatrix(1);
-		glFlush(0);
+		glFlush(ds_flush.value);
 #endif
 		//Con_DPrintf("draw: %3d cull: %3d all: %3d\n",r_surf_draw,r_surf_cull,r_surf_draw+r_surf_cull);
 		//Con_DPrintf("surf: %4d alias: %4d all: %4d\n",r_surf_tri,r_alias_tri,r_surf_tri+r_alias_tri);

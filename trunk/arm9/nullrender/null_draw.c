@@ -149,6 +149,22 @@ void DS_Load_Chars(unsigned short *dest,int start,int end)
 		dest += (64/2);
 	}
 }
+int show_stdout = 0;
+void toggle_stdout_f(void)
+{
+#ifdef NDS
+	if(show_stdout)
+	{
+		BG1_CR |= BG_PRIORITY_3;
+		show_stdout = 0;
+	}
+	else
+	{
+		BG1_CR &= (~BG_PRIORITY_3);
+		show_stdout = 1;
+	}
+#endif
+}
 
 /*
 ===============
@@ -175,18 +191,23 @@ void Draw_Init (void)
 	//vid.aliasbuffer = (pixel_t *)Hunk_AllocName(256*192,"aliasbuf");
 
 #ifdef NDS
-	BG2_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(8) | BG_TILE_BASE(0) | BG_PRIORITY_0;
-	SUB_BG0_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(23) | BG_TILE_BASE(2) | BG_PRIORITY_0;
+	BG0_CR &= (~BG_PRIORITY_3);
+	BG0_CR |= BG_PRIORITY_1;
+	BG1_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(14) | BG_TILE_BASE(0) | BG_PRIORITY_3;
+	BG2_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(15) | BG_TILE_BASE(0) | BG_PRIORITY_0;
+	//SUB_BG0_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(23) | BG_TILE_BASE(2) | BG_PRIORITY_0;
 	DS_Load_Chars((u16*)CHAR_BASE_BLOCK(0),0,256);
-	DS_Load_Chars((u16*)CHAR_BASE_BLOCK_SUB(2),0,256-32);
+	//DS_Load_Chars((u16*)CHAR_BASE_BLOCK_SUB(2),0,256-32);
 
 	int i;
 	for(i=0;i<32*32;i++)
 	{
-		((u16*)SCREEN_BASE_BLOCK(8))[i] = (u16)' ';
+		((u16*)SCREEN_BASE_BLOCK(15))[i] = (u16)' ';
 	}
 #endif
 
+	show_overlay(true,false);
+	Cmd_AddCommand ("stdout",toggle_stdout_f);
 }
 
 void Draw_CharacterCenter (int x, int y, int num)
@@ -204,7 +225,7 @@ void Draw_CharacterCenter (int x, int y, int num)
 	if(col < 0 || col > 31 || row < 0 || row > 23)
 		return;
 #ifdef NDS
-	pusdest = ((u16*)SCREEN_BASE_BLOCK(8));
+	pusdest = ((u16*)SCREEN_BASE_BLOCK(15));
 	pusdest[row*32+col] = num;
 #endif
 }
@@ -861,24 +882,31 @@ refresh window.
 */
 void Draw_TileClear (int x, int y, int w, int h)
 {
-	int				width, height, tileoffsetx, tileoffsety;
+	int				x1,x2,y1,y2;
 	byte			*psrc;
-	vrect_t			vr;
 
-	r_rectdesc.rect.x = x;
-	r_rectdesc.rect.y = y;
-	r_rectdesc.rect.width = w;
-	r_rectdesc.rect.height = h;
-
-	vr.y = r_rectdesc.rect.y;
-	height = r_rectdesc.rect.height;
-
-	tileoffsety = vr.y % r_rectdesc.height;
+	x1 = x;
+	y1 = y;
+	x2 = x+w;
+	y2 = y+h;
+	if(x1 < 0)
+		x1 = 0;
+	if(x2 >= vid.width)
+		x2 = vid.width-1;
+	if(y1 < 0)
+		y1 = 0;
+	if(y2 >= vid.height)
+		y2 = vid.height-1;
 
 	if(vid.buffer == 0)
 		return;
 	if(key_dest == key_game && !cl.intermission)
 	{
+		while(y1 < y2)
+		{
+			memset(vid.buffer + x1 + (y1*vid.width),0,x2-x1);
+			y1++;
+		}
 		//memset(vid.aliasbuffer,0,256*192);
 	}
 	else
@@ -887,45 +915,6 @@ void Draw_TileClear (int x, int y, int w, int h)
 	}
 	return;
 
-	while (height > 0)
-	{
-		vr.x = r_rectdesc.rect.x;
-		width = r_rectdesc.rect.width;
-
-		if (tileoffsety != 0)
-			vr.height = r_rectdesc.height - tileoffsety;
-		else
-			vr.height = r_rectdesc.height;
-
-		if (vr.height > height)
-			vr.height = height;
-
-		tileoffsetx = vr.x % r_rectdesc.width;
-
-		while (width > 0)
-		{
-			if (tileoffsetx != 0)
-				vr.width = r_rectdesc.width - tileoffsetx;
-			else
-				vr.width = r_rectdesc.width;
-
-			if (vr.width > width)
-				vr.width = width;
-
-			psrc = r_rectdesc.ptexbytes +
-					(tileoffsety * r_rectdesc.rowbytes) + tileoffsetx;
-
-			R_DrawRect8 (&vr, r_rectdesc.rowbytes, psrc, 0);
-
-			vr.x += vr.width;
-			width -= vr.width;
-			tileoffsetx = 0;	// only the left tile can be left-clipped
-		}
-
-		vr.y += vr.height;
-		height -= vr.height;
-		tileoffsety = 0;		// only the top tile can be top-clipped
-	}
 }
 
 
@@ -1019,6 +1008,8 @@ void Draw_EndDisc (void)
 	//D_EndDirectRect (vid.width - 24, 0, 24, 24);
 }
 
+extern qboolean	scr_drawloading;
+extern cvar_t		ds_hud_alpha;
 
 void Draw_UpdateVRAM()
 {
@@ -1031,12 +1022,41 @@ void Draw_UpdateVRAM()
 		return;
 
 // draw the pic
-	if(key_dest == key_game && !cl.intermission)
+	if(key_dest == key_game && 
+		!cl.intermission && 
+		cls.state == ca_connected && 
+		!scr_drawloading &&
+		!scr_disabled_for_loading)
 	{
+		src8 = 0;
+#ifdef NDS
+extern u16 *ds_display_bottom;
+extern int ds_display_bottom_height;
+int x,y;
+BLEND_CR = BLEND_SRC_BG3|BLEND_DST_BG0|BLEND_DST_BG1|BLEND_ALPHA;
+BLEND_AB = ((int)ds_hud_alpha.value)|(31<<8);
+	if(sb_lines)
+	{
+		dest16 = ((u16*)BG_BMP_RAM(2)) + ((vid.height - sb_lines)*(vid.conwidth>>1));
+		src8 = vid.buffer + ((vid.conheight - sb_lines)*vid.conwidth);
+		dmaCopyWords(2, (uint32*)src8,(uint32*)dest16, vid.conwidth*sb_lines);
+	}
+#if 0
+	for(y=8;y<64;y++)
+	{
+		dest16 = ((u16*)BG_BMP_RAM_SUB(2)) + y*64 + 4;
+		src8 = vid.buffer + y*128 + 8;
+		dmaCopyWords(2, (uint32*)src8,(uint32*)dest16, 24);
+	}
+#endif
+#endif
 		return;
 	}
 #ifdef NDS
-	dest16 = ((u16*)BG_BMP_RAM(2));
+extern u16 *ds_display_menu;
+	dest16 = ds_display_menu;
+BLEND_CR = 0;
+BLEND_AB = 0;
 #else
 	dest16 = (unsigned short *)vid.conbuffer;
 #endif
