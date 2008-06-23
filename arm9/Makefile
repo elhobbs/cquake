@@ -35,7 +35,8 @@ CFLAGS1	:=	-g -Wall -O0\
 			-ffast-math \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM9 -DNDS -DBYTE_DEFINED -DUSE_WIFI
+CFLAGS	+=	$(INCLUDE) -DARM9 -DNDS -DBYTE_DEFINED 
+#CFLAGS  +=  -DUSE_WIFI
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH) -march=armv5te -mtune=arm946e-s

@@ -1,4 +1,5 @@
 #include "quakedef.h"
+
 #ifdef NDS
 #include <nds.h>
 u16	d_8to16table[256];
@@ -157,6 +158,36 @@ void	VID_ShiftPalette (unsigned char *palette)
 	vramSetBankF(VRAM_F_TEX_PALETTE);
 #endif
 }
+int vid_on_top = 0;
+
+void VID_swap_f (void)
+{
+	int			c;
+#ifdef NDS	
+extern u16 *ds_display_top;
+extern u16 *ds_display_bottom;
+extern int	ds_display_bottom_height;
+	if(vid_on_top)
+	{
+		lcdMainOnBottom();
+		vid_on_top = 0;
+		ds_display_bottom = (u16*)BG_BMP_RAM(2);
+		ds_display_bottom_height = 128;
+		ds_display_top = (u16*)BG_BMP_RAM_SUB(0);
+	}
+	else
+	{
+		lcdMainOnTop();
+		vid_on_top = 1;
+		ds_display_top = (u16*)BG_BMP_RAM(2);
+		ds_display_bottom = (u16*)BG_BMP_RAM_SUB(0);
+		ds_display_bottom_height = 192;
+	}
+	//memset(ds_display_bottom,0,256*192);
+	//memset(ds_display_top,0,256*192);
+#endif
+}
+
 
 // Called at startup to set up translation tables, takes 256 8 bit RGB values
 // the palette data will go away after the call, so it must be copied off if
@@ -176,6 +207,7 @@ void	VID_Init (unsigned char *palette)
 	VID_SetMode (0, palette);
 	//vid.buffer = BG_GFX;
 	//vid.buffer = Hunk_AllocName(320*200,"screen");
+	Cmd_AddCommand ("v_swap",VID_swap_f);
 }
 
 // Called at shutdown

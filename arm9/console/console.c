@@ -88,7 +88,8 @@ void Con_ToggleConsole_f (void)
 		key_dest = key_console;
 	}
 	
-	SCR_EndLoadingPlaque ();
+	//SCR_EndLoadingPlaque ();
+	Con_ClearNotify ();
 	memset (con_times, 0, sizeof(con_times));
 }
 

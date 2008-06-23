@@ -41,6 +41,9 @@ cvar_t		scr_showpause = {"showpause","1"};
 cvar_t		scr_showfps = {"showfps","1", true};
 cvar_t		scr_printspeed = {"scr_printspeed","8"};
 
+cvar_t		ds_flush = {"ds_flush","0",true};
+cvar_t		ds_hud_alpha = {"ds_hud_alpha","16",true};
+
 qboolean	scr_initialized;		// ready to draw
 
 qpic_t		*scr_ram;
@@ -515,6 +518,9 @@ void SCR_Init (void)
 	Cvar_RegisterVariable (&scr_centertime);
 	Cvar_RegisterVariable (&scr_printspeed);
 
+	Cvar_RegisterVariable (&ds_flush);
+	Cvar_RegisterVariable (&ds_hud_alpha);
+
 //
 // register our commands
 //
@@ -658,6 +664,7 @@ void SCR_DrawLoading (void)
 	if (!scr_drawloading)
 		return;
 		
+	Draw_ConsoleBackground (vid.height);
 	pic = Draw_CachePic ("gfx/loading.lmp");
 	Draw_Pic ( (vid.width - pic->width)/2, 
 		(vid.height - 48 - pic->height)/2, pic);
@@ -905,6 +912,7 @@ void SCR_BeginLoadingPlaque (void)
 	scr_con_current = 0;
 
 	scr_drawloading = true;
+	show_overlay(true,false);
 	scr_fullupdate = 0;
 	Sbar_Changed ();
 	SCR_UpdateScreen ();
@@ -913,6 +921,7 @@ void SCR_BeginLoadingPlaque (void)
 	scr_disabled_for_loading = true;
 	scr_disabled_time = realtime;
 	scr_fullupdate = 0;
+	
 }
 
 /*
@@ -923,6 +932,7 @@ SCR_EndLoadingPlaque
 */
 void SCR_EndLoadingPlaque (void)
 {
+	show_overlay(false,false);
 	scr_disabled_for_loading = false;
 	scr_fullupdate = 0;
 	Con_ClearNotify ();
@@ -1142,7 +1152,7 @@ void SCR_UpdateScreen (void)
 	else if (scr_drawloading)
 	{
 		SCR_DrawLoading ();
-		Sbar_Draw ();
+		//Sbar_Draw ();
 	}
 	else if (cl.intermission == 1 && key_dest == key_game)
 	{

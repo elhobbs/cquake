@@ -544,7 +544,7 @@ void Host_Loadgame_f (void)
 	sprintf (name, "%s/%s", com_gamedir, Cmd_Argv(1));
 	COM_DefaultExtension (name, ".sav");
 
-#define LOAD_BUFFER_SIZE (8192)
+#define LOAD_BUFFER_SIZE (4096)
 
 	str = (char*)malloc(LOAD_BUFFER_SIZE);
 	if(str == 0)
@@ -673,8 +673,8 @@ void Host_Loadgame_f (void)
 		CL_EstablishConnection ("local");
 		Host_Reconnect_f ();
 	}
-	show_overlay(false,false);
 cleanup:
+
 	if(str)
 		free(str);
 }

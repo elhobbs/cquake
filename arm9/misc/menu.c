@@ -937,7 +937,7 @@ void M_Net_Key (int k)
 #ifdef _WIN32
 #define	OPTIONS_ITEMS	14
 #else
-#define	OPTIONS_ITEMS	13
+#define	OPTIONS_ITEMS	15
 #endif
 
 #define	SLIDER_RANGE	10
@@ -952,6 +952,8 @@ void M_Menu_Options_f (void)
 
 }
 
+extern int vid_on_top;
+extern cvar_t ds_hud_alpha;
 
 void M_AdjustSliders (int dir)
 {
@@ -1029,6 +1031,14 @@ void M_AdjustSliders (int dir)
 		Cvar_SetValue ("lookstrafe", !lookstrafe.value);
 		break;
 
+	case 13:	// HUD Alpha
+		ds_hud_alpha.value += dir * 1;
+		if (ds_hud_alpha.value < 0)
+			ds_hud_alpha.value = 0;
+		if (ds_hud_alpha.value > 31)
+			ds_hud_alpha.value = 31;
+		Cvar_SetValue ("ds_hud_alpha", ds_hud_alpha.value);
+		break;
 	}
 }
 
@@ -1051,10 +1061,11 @@ void M_DrawSlider (int x, int y, float range)
 void M_DrawCheckbox (int x, int y, int on)
 {
 	if (on)
-		M_Print (x, y, "on");
+		M_Print (x, y, "on ");
 	else
 		M_Print (x, y, "off");
 }
+extern int vid_on_top;
 
 void M_Options_Draw (void)
 {
@@ -1101,12 +1112,22 @@ void M_Options_Draw (void)
 	M_Print (0, 120, "      Lookstrafe");
 	M_DrawCheckbox (160, 120, (int)lookstrafe.value);
 
-	M_Print (0, 128, "   Video Options");
+	//M_Print (0, 128, "   Video Options");
 
-// cursor
+	M_Print (0, 128, "      3D on Top");
+	M_DrawCheckbox (160, 128, vid_on_top);
+
+	M_Print (0, 136, "       HUD Alpha");
+	r = (ds_hud_alpha.value)/31;
+	M_DrawSlider (160, 136, r);
+
+	M_Print (0, 144, "   Save Settings");
+	// cursor
 	M_DrawCharacter (136, 32 + options_cursor*8, 12+((int)(realtime*4)&1));
 }
 
+void Host_WriteConfiguration (void);
+void VID_swap_f (void);
 
 void M_Options_Key (int k)
 {
@@ -1133,7 +1154,11 @@ void M_Options_Key (int k)
 			Cbuf_AddText ("exec default.cfg\n");
 			break;
 		case 12:
-			M_Menu_Video_f ();
+			//M_Menu_Video_f ();
+			VID_swap_f();
+			break;
+		case 14:
+			Host_WriteConfiguration ();
 			break;
 		default:
 			M_AdjustSliders (1);
@@ -2431,7 +2456,7 @@ void M_Draw (void)
 		int i;
 		for(i=0;i<32*32;i++)
 		{
-			((u16*)SCREEN_BASE_BLOCK(8))[i] = (u16)' ';
+			((u16*)SCREEN_BASE_BLOCK(15))[i] = (u16)' ';
 		}
 		last_state = m_state;
 	}

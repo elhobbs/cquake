@@ -1025,6 +1025,8 @@ void SV_SpawnServer (char *server)
 	int			i;
 	bmodel_t *model;
 
+	//show_overlay(true,false);
+
 	// let's not have any servers with no name
 	if (hostname.string[0] == 0)
 		Cvar_Set ("hostname", "UNNAMED");
@@ -1176,6 +1178,6 @@ void SV_SpawnServer (char *server)
 			SV_SendServerinfo (host_client);
 	
 	Con_Printf ("Server spawned.\n");
-	show_overlay(false,false);
+	//show_overlay(false,false);
 }
 
