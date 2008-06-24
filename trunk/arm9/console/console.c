@@ -104,6 +104,8 @@ void Con_Clear_f (void)
 		Q_memset (con_text, ' ', CON_TEXTSIZE);
 }
 
+void Draw_CharacterCenter (int x, int y, int num);
+void Draw_StringCenter (int x, int y, char *str);
 						
 /*
 ================
@@ -112,10 +114,14 @@ Con_ClearNotify
 */
 void Con_ClearNotify (void)
 {
-	int		i;
+	int		i,x;
 	
 	for (i=0 ; i<NUM_CON_TIMES ; i++)
+	{
 		con_times[i] = 0;
+		for(x=0 ;x<32;x++)
+			Draw_CharacterCenter ( x<<3, (i<<3)+8, ' ');
+	}
 }
 
 						
@@ -166,7 +172,7 @@ void Con_CheckResize (void)
 
 	if (width < 1)			// video hasn't been initialized yet
 	{
-		width = 38;
+		width = 32;
 		con_linewidth = width;
 		con_totallines = CON_TEXTSIZE / con_linewidth;
 		Q_memset (con_text, ' ', CON_TEXTSIZE);
@@ -525,6 +531,7 @@ void Con_DrawInput (void)
 }
 
 
+
 /*
 ================
 Con_DrawNotify
@@ -557,7 +564,7 @@ void Con_DrawNotify (void)
 		scr_copytop = 1;
 
 		for (x = 0 ; x < con_linewidth ; x++)
-			Draw_Character ( (x+1)<<3, v, text[x]);
+			Draw_CharacterCenter ( (x+1)<<3, v+8, text[x]);
 
 		v += 8;
 	}
@@ -570,18 +577,26 @@ void Con_DrawNotify (void)
 	
 		x = 0;
 		
-		Draw_String (8, v, "say:");
+		Draw_StringCenter (8, v+8, "say:");
 		while(chat_buffer[x])
 		{
-			Draw_Character ( (x+5)<<3, v, chat_buffer[x]);
+			Draw_CharacterCenter ( (x+5)<<3, v+8, chat_buffer[x]);
 			x++;
 		}
-		Draw_Character ( (x+5)<<3, v, 10+((int)(realtime*con_cursorspeed)&1));
+		Draw_CharacterCenter ( (x+5)<<3, v+8, 10+((int)(realtime*con_cursorspeed)&1));
 		v += 8;
 	}
 	
 	if (v > con_notifylines)
 		con_notifylines = v;
+	else
+	{
+		for( ;v < con_notifylines; v+= 8)
+		{
+			for(x=0 ;x<32;x++)
+				Draw_CharacterCenter ( (x)<<3, v+8, ' ');
+		}
+	}
 }
 
 /*
