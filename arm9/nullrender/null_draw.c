@@ -305,6 +305,20 @@ void Draw_Character (int x, int y, int num)
 
 /*
 ================
+Draw_StringCenter
+================
+*/
+void Draw_StringCenter (int x, int y, char *str)
+{
+	while (*str)
+	{
+		Draw_CharacterCenter (x, y, *str);
+		str++;
+		x += 8;
+	}
+}
+/*
+================
 Draw_String
 ================
 */

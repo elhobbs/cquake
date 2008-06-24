@@ -877,6 +877,11 @@ void Sbar_DrawFace (void)
 	}
 	else
 		anim = 0;
+	if(f < 0 || f > 4)
+	{
+		f = 0;
+		//Sys_Error("bad f in Sbar_DrawFace - %d\n",f);
+	}
 	Sbar_DrawPic (104, 0, sb_faces[f][anim]);
 }
 
