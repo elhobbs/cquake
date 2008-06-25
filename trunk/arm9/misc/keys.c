@@ -174,7 +174,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_UPARROW || key == K_NDS_UP)
+	if (/*key == K_UPARROW || */key == K_NDS_UP)
 	{
 		do
 		{
@@ -188,7 +188,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_DOWNARROW || key == K_NDS_DOWN)
+	if (/*key == K_DOWNARROW ||*/ key == K_NDS_DOWN)
 	{
 		if (history_line == edit_line) return;
 		do
@@ -210,7 +210,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_PGUP || key==K_MWHEELUP)
+	if (key == K_UPARROW || key==K_MWHEELUP)
 	{
 		con_backscroll += 2;
 		if (con_backscroll > con_totallines - ((signed)vid.height>>3) - 1)
@@ -218,7 +218,7 @@ void Key_Console (int key)
 		return;
 	}
 
-	if (key == K_PGDN || key==K_MWHEELDOWN)
+	if (key == K_DOWNARROW || key==K_MWHEELDOWN)
 	{
 		con_backscroll -= 2;
 		if (con_backscroll < 0)

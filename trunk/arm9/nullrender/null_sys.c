@@ -522,7 +522,7 @@ extern u16 *ds_display_bottom;
 extern int ds_display_bottom_height;
 		if(vid.buffer && !cl.intermission)
 		{
-			Con_Printf("clearing vmem\n");
+			//Con_Printf("clearing vmem\n");
 			memset(((u16*)BG_BMP_RAM(2)), 0,vid.width*vid.height);
 			memset(vid.buffer,0,vid.width*vid.height);
 		}
@@ -541,6 +541,7 @@ extern int ds_display_bottom_height;
 	{
 		((u16*)SCREEN_BASE_BLOCK(15))[i] = (u16)' ';
 	}
+	memset((char *)BG_BMP_RAM_SUB(0),0,vid.height*vid.width);
 #endif
 	if(showkeys)
 	{
@@ -1120,8 +1121,15 @@ void Sys_Init()
 	vramSetBankI(VRAM_I_SUB_BG); 
 
 	// Subscreen as a console
-	videoSetModeSub(MODE_5_2D | DISPLAY_BG0_ACTIVE/* | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE*/);
+	videoSetModeSub(MODE_5_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG2_ACTIVE/* | DISPLAY_BG3_ACTIVE*/);
 	
+	SUB_BG2_CR = BG_BMP8_256x256 | BG_TILE_BASE(0) | BG_PRIORITY_0;
+	SUB_BG2_XDX = 1<<8;
+ 	SUB_BG2_YDY = 1<<8;
+ 	SUB_BG2_XDY = 0;
+ 	SUB_BG2_YDX = 0;
+ 	SUB_BG2_CX = 0;
+ 	SUB_BG2_CY = 0;
 /*
 	SUB_BG2_CR = BG_BMP8_128x128 | BG_TILE_BASE(0) | BG_PRIORITY_1;
 	SUB_BG2_XDX = 1<<8;

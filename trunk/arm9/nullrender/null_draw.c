@@ -240,7 +240,7 @@ It can be clipped to the top of the screen to allow the console to be
 smoothly scrolled off.
 ================
 */
-void Draw_Character (int x, int y, int num)
+void Draw_Character2 (int x, int y, int num,char *vbuf)
 {
 	byte			*dest;
 	byte			*source;
@@ -278,7 +278,7 @@ void Draw_Character (int x, int y, int num)
 		drawline = 8;
 
 
-		dest = vid.conbuffer + y*vid.conrowbytes + x;
+		dest = (byte *)vbuf + y*vid.conrowbytes + x;
 	
 		while (drawline--)
 		{
@@ -301,6 +301,10 @@ void Draw_Character (int x, int y, int num)
 			source += 128;
 			dest += vid.conrowbytes;
 		}
+}
+void Draw_Character (int x, int y, int num)
+{
+	Draw_Character2(x,y,num,(char*)vid.buffer);
 }
 
 /*

@@ -473,12 +473,12 @@ void Hunk_Print_Name_f (void)
 void Hunk_Print_f (void)
 {
 extern cvar_t	host_speeds;// = {"host_speeds","0"};			// set for running times
-	char buf[256];
+	//char buf[256];
 	Hunk_Print(false);
+#if 0
 	sprintf(buf,"%3.2f %3.2f",r_refdef.fov_x,r_refdef.fov_y);
 	Con_Printf("%d %d %d %d\n%s\n",r_refdef.vrect.x,r_refdef.vrect.y,r_refdef.vrect.width,r_refdef.vrect.height,buf);
 
-#ifdef NDS
 	int32 modMatrix[16];
 	glGetFixed(GL_GET_MATRIX_POSITION,modMatrix);
 	for(int i=0;i<16;i+=4)
@@ -513,14 +513,6 @@ extern cvar_t	host_speeds;// = {"host_speeds","0"};			// set for running times
 	Con_Printf("pos: %s\n",buf);
 #endif
 
-	if(host_speeds.value)
-	{
-		host_speeds.value = 0.0f;
-	}
-	else
-	{
-		host_speeds.value = 1.0f;
-	}
 }
 /*
 ===================

@@ -70,7 +70,7 @@ void R_InitParticles (void)
 	}
 	else
 	{
-		r_numparticles = MAX_PARTICLES;//ABSOLUTE_MIN_PARTICLES;//MAX_PARTICLES;
+		r_numparticles = ABSOLUTE_MIN_PARTICLES;//MAX_PARTICLES;
 	}
 
 	particles = (particle_t *)
