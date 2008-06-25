@@ -277,7 +277,7 @@ void M_Menu_Main_f (void)
 	m_state = m_main;
 	m_entersound = true;
 	show_overlay(true,false);
-	Con_Printf("show\n");
+	//Con_Printf("show\n");
 }
 
 

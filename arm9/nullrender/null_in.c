@@ -21,7 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include		"quakedef.h"
 
-cvar_t	keyboard = {"keyboard","1"};			// set for running times
+cvar_t	keyboard = {"keyboard","0"};			// set for running times
 int key_down = -1;
 
 
@@ -235,32 +235,46 @@ int keys = KEYS_CUR;
 	last_pos = key_touching_index = -1;
 }
 
+extern int vid_on_top;
+void Draw_Character2 (int x, int y, int num,char *vbuf);
+
 void draw_keyboard()
 {
 	int i,j,k,pos;
 	int x;
 	int y;
-	int len;
-	char *buf,*ch;
+	int len,vofs;
+	char *buf,*ch,*vbuf;
 	int count = sizeof(key_array)/sizeof(sregion_t);
 
 	if(keyboard.value == 0)
 		return;
 
-	Draw_Fill(0,vid.height/2,16*16,5*16,1);
+	if(vid_on_top)
+	{
+		vbuf = (char *)Hunk_TempAlloc(16*16*5*16);
+		vofs = 0;
+	}
+	else
+	{
+		vbuf = (char *)vid.buffer;
+		vofs = vid.height/2;
+		Draw_Fill(0,vid.height/2,16*16,5*16,1);
+	}
+
 
 	for(i=0;i<count;i++)
 	{
 		if(key_array[i].type == 0)
 		{
 			x = key_array[i].x;
-			y = vid.height/2 + key_array[i].y;
+			y = vofs + key_array[i].y;
 			ch = (key_in_shift||key_in_caps) ? key_array[i].shift_text : key_array[i].text;
 			pos = 0;
 			while(ch && *ch)
 			{
 				//left/right sides
-				buf = (char *)vid.buffer + ((y+1)*vid.width) + x;
+				buf = vbuf + ((y+1)*vid.width) + x;
 				for(k=0;k<14;k++)
 				{
 					*buf = 7;
@@ -268,7 +282,7 @@ void draw_keyboard()
 					buf += vid.width;
 				}
 				//top/bottom
-				buf = (char *)vid.buffer + ((y+1)*vid.width) + x + 1;
+				buf = vbuf + ((y+1)*vid.width) + x + 1;
 				for(k=0;k<14;k++)
 				{
 					*buf = 7;
@@ -276,9 +290,9 @@ void draw_keyboard()
 					buf ++;
 				}
 				if(key_touching == &key_array[i] && key_touching_index == pos)
-					Draw_Character(x+3,y+4,*ch<128 ? *ch+128 : *ch);
+					Draw_Character2(x+3,y+4,*ch<128 ? *ch+128 : *ch,vbuf);
 				else
-					Draw_Character(x+3,y+4,*ch);
+					Draw_Character2(x+3,y+4,*ch,vbuf);
 				ch++;
 				x+=16;
 				pos++;
@@ -287,11 +301,11 @@ void draw_keyboard()
 		else if(key_array[i].type == 1)
 		{
 			x = key_array[i].x;
-			y = vid.height/2 + key_array[i].y;
+			y = vofs+ key_array[i].y;
 			ch = key_array[i].text;
 			len = strlen(ch)*8 + 4;
 			//left/right sides
-			buf = (char *)vid.buffer + ((y+1)*vid.width) + x;
+			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<14;k++)
 			{
 				*buf = 7;
@@ -299,7 +313,7 @@ void draw_keyboard()
 				buf += vid.width;
 			}
 			//top/bottom
-			buf = (char *)vid.buffer + ((y+1)*vid.width) + x + 1;
+			buf = vbuf + ((y+1)*vid.width) + x + 1;
 			for(k=0;k<len;k++)
 			{
 				*buf = 7;
@@ -309,9 +323,9 @@ void draw_keyboard()
 			while(ch && *ch)
 			{
 				if(key_touching == &key_array[i])
-					Draw_Character(x+3,y+4,*ch<128 ? *ch+128 : *ch);
+					Draw_Character2(x+3,y+4,*ch<128 ? *ch+128 : *ch,vbuf);
 				else
-					Draw_Character(x+3,y+4,*ch);
+					Draw_Character2(x+3,y+4,*ch,vbuf);
 				ch++;
 				x+=8;
 			}
@@ -319,8 +333,8 @@ void draw_keyboard()
 		else if(key_array[i].type == 2)
 		{
 			x = key_array[i].x;
-			y = vid.height/2 + key_array[i].y;
-			buf = (char *)vid.buffer + ((y+1)*vid.width) + x;
+			y = vofs + key_array[i].y;
+			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
 				for(j=0;j<12;j++)
@@ -334,8 +348,8 @@ void draw_keyboard()
 		else if(key_array[i].type == 3)
 		{
 			x = key_array[i].x;
-			y = vid.height/2 + key_array[i].y;
-			buf = (char *)vid.buffer + ((y+1)*vid.width) + x;
+			y = vofs + key_array[i].y;
+			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
 				for(j=0;j<12;j++)
@@ -349,14 +363,14 @@ void draw_keyboard()
 		else if(key_array[i].type == 4)
 		{
 			x = key_array[i].x;
-			y = vid.height/2 + key_array[i].y;
-			buf = (char *)vid.buffer + ((y+1)*vid.width) + x;
+			y = vofs + key_array[i].y;
+			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
 				for(j=0;j<12;j++)
 				{
-					if(key_arrow[12-k][j])
-						buf[j] = key_arrow[12-k][j];
+					if(key_arrow[11-k][j])
+						buf[j] = key_arrow[11-k][j];
 				}
 				buf += vid.width;
 			}
@@ -364,114 +378,35 @@ void draw_keyboard()
 		else if(key_array[i].type == 5)
 		{
 			x = key_array[i].x;
-			y = vid.height/2 + key_array[i].y;
-			buf = (char *)vid.buffer + ((y+1)*vid.width) + x;
+			y = vofs + key_array[i].y;
+			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
 				for(j=0;j<12;j++)
 				{
 					if(key_arrow[j][k])
-						buf[12-j] = key_arrow[j][k];
+						buf[11-j] = key_arrow[j][k];
 				}
 				buf += vid.width;
 			}
 		}
 	}
-}
-
-#ifdef NDS2
-
-#define KEYS_CUR (( ((~REG_KEYINPUT)&0x3ff) | (((~IPC->buttons)&3)<<10) | (((~IPC->buttons)<<6) & (KEY_TOUCH|KEY_LID) ))^KEY_LID)
-u32 keys_last = 0;
-u32 nds_keys[] = {
-K_NDS_A,
-K_NDS_B,
-K_NDS_SELECT,
-K_NDS_START,
-K_NDS_RIGHT,
-K_NDS_LEFT,
-K_NDS_UP,
-K_NDS_DOWN,
-K_NDS_R,
-K_NDS_L,
-K_NDS_X,
-K_NDS_Y,
-K_NDS_F1};
-
-touchPosition	thisXY;
-touchPosition	lastXY = { 0,0,0,0 };
-void IN_Commands (void)
-{
-	u32 key_mask=1;
-	u32 keys = KEYS_CUR;
-	u32 i;
-	for(i=0;i<12;i++,key_mask<<=1) {
-		if( (keys & key_mask) && !(keys_last & key_mask)) {
-			//iprintf("pressed start\n");
-			Key_Event (nds_keys[i], true);
-		} else if( !(keys & key_mask) && (keys_last & key_mask)) {
-			//iprintf("released start\n");
-			Key_Event (nds_keys[i], false);
-		}
-	}
-
-	keys_last = keys;
-	
-	if(keyboard.value)
+	//just dump now
+	if(vid_on_top)
 	{
-		if (keys & KEY_TOUCH)
-		{
-			int x,y,i,j,key_new;
-			thisXY = touchReadXY();
-			x = thisXY.px;
-			y = thisXY.py;
-			if(x < 16 && y < 16)
-			{
-				key_new = K_NDS_F1;
-				if(key_down != key_new)
-				{
-					if(key_down != -1)
-						Key_Event(key_down,false);
-					key_down = key_new;
-					Key_Event(key_down,true);
-				}
-			}
-			else
-			{
-				x = x - 8;
-				if(x < 0 || x > (15*16))
-					return;
-				y = y - (vid.conheight>>1);
-				if(y < 0 || y > (5*16))
-					return;
-				x = (x*vid.conwidth)/vid.width;
-				y = (y*vid.conheight)/vid.height;
-				j = x >> 4;
-				i = y >> 4;
-				key_new = key_chars[i][j];
-				if(key_down != key_new)
-				{
-					if(key_down != -1)
-						Key_Event(key_down,false);
-					key_down = key_new;
-					Key_Event(key_down,true);
-				}
-			}
-		}
-		else
-		{
-			if(key_down != -1)
-			{
-				Key_Event(key_down,false);
-				key_down = -1;
-			}
-		}
-	}
+#ifdef NDS
+		char * dest;
 
+		dest = (char *)BG_BMP_RAM_SUB(0);
+		dest += (vid.height/2)*vid.width;
+		dmaCopyWords(2, (uint32*)vbuf,(uint32*)dest, vid.width*5*16);
+#endif
+	}
 }
-#else
+
 void IN_Commands (void)
 {
+	int key;
 #ifdef NDS
 	u32 key_mask=1;
 	u32 i;
@@ -504,14 +439,21 @@ void IN_Commands (void)
 	switch(key_touching->type)
 	{
 	case 0:
-		key_down = (key_in_shift||key_in_caps) ? key_touching->shift_text[key_touching_index] : key_touching->text[key_touching_index];
-		Key_Event(key_down,true);
+		key = (key_in_shift||key_in_caps) ? key_touching->shift_text[key_touching_index] : key_touching->text[key_touching_index];
 		key_in_shift = 0;
 		break;
 	default:
-		key_down = key_touching->key;
-		Key_Event(key_down,true);
+		key = key_touching->key;
 		break;
+	}
+	if(key_down != -1 && key != key_down)
+	{
+		Key_Event(key_down,false);
+	}
+	if(key != key_down)
+	{
+		Key_Event(key,true);
+		key_down = key;
 	}
 
 	//check for shift
@@ -519,8 +461,13 @@ void IN_Commands (void)
 	{
 		key_in_shift = 1;
 	}
+	//check for caps
+	if(key_touching == &key_array[4])
+	{
+		key_in_caps = key_in_caps ? 0 : 1;
+	}
 }
-#endif
+
 /*
 ==================
 Force_CenterView_f
