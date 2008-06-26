@@ -1791,9 +1791,9 @@ void COM_AddGameDirectory (char *dir)
 	for (i=0 ; ; i++)
 	{
 		sprintf (pakfile, "%s/pak%i.pak", dir, i);
-		Con_Printf("\n-----------\n");
-		Con_Printf(pakfile);
-		Con_Printf("\n-----------\n");
+		//Con_Printf("\n-----------\n");
+		//Con_Printf(pakfile);
+		//Con_Printf("\n-----------\n");
 		pak = COM_LoadPackFile (pakfile);
 		if (!pak)
 			break;
@@ -1808,7 +1808,7 @@ void COM_AddGameDirectory (char *dir)
 //
 
 }
-
+void ds_choose_game(char *base);
 /*
 ================
 COM_InitFilesystem
@@ -1877,6 +1877,10 @@ void COM_InitFilesystem (void)
 	{
 		com_modified = true;
 		COM_AddGameDirectory (va("%s/%s", basedir, com_argv[i+1]));
+	}
+	else
+	{
+		ds_choose_game(basedir);
 	}
 
 //
