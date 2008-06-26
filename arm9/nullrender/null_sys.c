@@ -958,9 +958,11 @@ void ds_choose_game(char *base)
 			iprintf ("Unable to open the directory.\n");
 		} else {
 			while (dirnext(dir, filename, &st) == 0) {
-				if(st.st_mode & S_IFDIR && strcmp(filename,".") != 0)
+				if(st.st_mode & S_IFDIR)
 				{
-					if(strcmpi(filename,GAMENAME) == 0)
+					if(strcmpi(filename,GAMENAME) == 0 || 
+						strcmp(filename,"..") == 0 ||
+						strcmp(filename,".") == 0)
 						continue;
 					len = strlen(filename) + 1;
 					if(pos + len >= 4096)
