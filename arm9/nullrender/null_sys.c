@@ -42,6 +42,7 @@ static int			lowshift;
 #include "cyg-profile.h"
 #include "fat\partition.h"
 #include <sys/stat.h>
+#include <sys/dir.h>
 
 
 #ifdef USE_WIFI
@@ -921,6 +922,111 @@ void read_cquake_ini(quakeparms_t    *parms)
 	parms->argv = com_argv;
 }
 
+void ds_choose_game(char *base)
+{
+	char *buf;
+	char *dirlist[30];
+	int dircount = 0;
+	int pos = 0;
+	int len,pressed;
+	int i = COM_CheckParm ("-listgame");
+
+	if(i == 0)
+		return;
+
+	buf = (char *)Hunk_TempAlloc(4096);
+#ifdef NDS
+	{
+		struct stat st;
+		char filename[256];
+		DIR_ITER* dir;
+		if(base == 0 || *base == 0)
+			dir = diropen ("."); 
+		else
+			dir = diropen (base); 
+
+		// Clear the screen
+		iprintf ("\x1b[2J");
+
+		iprintf("Choose a mod game directory\nA to select or B to cancel");
+		// Move to 2nd row
+		iprintf ("\x1b[2;0H");
+		// Print line of dashes
+		iprintf ("--------------------------------");
+
+		if (dir == NULL) {
+			iprintf ("Unable to open the directory.\n");
+		} else {
+			while (dirnext(dir, filename, &st) == 0) {
+				if(st.st_mode & S_IFDIR && strcmp(filename,".") != 0)
+				{
+					if(strcmpi(filename,GAMENAME) == 0)
+						continue;
+					len = strlen(filename) + 1;
+					if(pos + len >= 4096)
+						break;
+
+					// Set row
+					iprintf ("\x1b[%d;0H", dircount + 3);
+					iprintf (" [%s]", filename);
+
+					dirlist[dircount++] = &buf[pos];
+					strcpy(&buf[pos],filename);
+					pos += len + 1;
+					
+				}
+				if(dircount >= 30)
+					break;
+			}
+		}	
+		
+		dirclose (dir);	
+	}
+	pressed = pos = 0;
+	while (true) {
+		// Clear old cursors
+		for (int i = 0; i < dircount; i++) {
+			iprintf ("\x1b[%d;0H ", i+3);
+		}
+		// Show cursor
+		iprintf ("\x1b[%d;0H*", pos + 3);
+		
+		// Power saving loop. Only poll the keys once per frame and sleep the CPU if there is nothing else to do
+		do {
+			scanKeys();
+			pressed = keysDown();
+			swiWaitForVBlank();
+		} while (!pressed);
+	
+		if (pressed & KEY_UP) 		pos -= 1;
+		if (pressed & KEY_DOWN) 	pos += 1;
+		
+		if (pos < 0) 	pos = dircount - 1;		// Wrap around to bottom of list
+		if (pos >= dircount)	pos = 0;		// Wrap around to top of list
+		
+		if (pressed & KEY_A) {
+extern qboolean        com_modified;   // set true if using non-id files
+void COM_AddGameDirectory (char *dir);
+
+			// Clear the screen
+			iprintf ("\x1b[2J");
+			//iprintf("adding game dir:\n\n%s/%s\n",base,dirlist[pos]);
+			com_modified = true;
+			COM_AddGameDirectory (va("%s/%s", base, dirlist[pos]));
+			break;
+		}
+		
+		if (pressed & KEY_B) {
+			// Clear the screen
+			iprintf ("\x1b[2J");
+			iprintf("canceled gamedir selection\n");
+			break;
+		}
+	}
+#endif
+	//while(1);
+}
+
 void quake_main (int argc, char **argv)
 {
 	float rotateX = 0.0;
@@ -1283,7 +1389,8 @@ void Sys_Init()
 	glClearPolyID(63); // BG must have a unique polygon ID for AA to work
 	//glClearDepth(0x7FFF);
 
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glCutoffDepth(0x7FFF);
 
 	Con_Printf("Initialing disk...");
 	ret = fatInitDefault();

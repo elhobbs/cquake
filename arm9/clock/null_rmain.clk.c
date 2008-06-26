@@ -724,7 +724,7 @@ extern uint32 ds_texture_pal;
 #ifdef NDS
 	glColor3b(232,232,232);
 	GFX_TEX_FORMAT = r_sky_bottom;
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
 #endif
 	EmitSkyPolys (fa,pts);
 
@@ -736,13 +736,13 @@ extern uint32 ds_texture_pal;
 	//glColorTable(GL_RGB32_A3,ds_alpha_pal);
 	GFX_TEX_FORMAT = r_sky_top;
 	//glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (0<<11) | POLY_MODULATION);
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11) | (1<<13));
 #endif
 	EmitSkyPolys (fa,pts);
 #ifdef NDS
 	//glDisable(GL_BLEND);
 	//glColorTable(GL_RGB256,ds_texture_pal);
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
 #endif
 
 }
@@ -769,7 +769,7 @@ void R_RenderSurface(msurface_t *fa)
 #ifdef NDS2
 	glEnable(GL_BLEND);
 	//glColorTable(GL_RGB256,ds_texture_pal);
-	glPolyFmt(POLY_ALPHA(0) | POLY_CULL_FRONT | POLY_ID(1));
+	glPolyFmt(POLY_ALPHA(0) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
 #endif
 	pedges = r_currentbmodel->edges;
 	lnumverts = fa->numedges;
