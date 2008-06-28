@@ -56,7 +56,7 @@ sregion_t key_array[] = {
 	{13*16 + 2	,0*16	,1,0,K_BACKSPACE,key_backspace},
 	{0			,1*16	,1,0,K_TAB,key_tab},
 	{4*8		,1*16	,0,0,0,key_row_2,key_row_2_shift},
-	{0			,2*16	,1,0,0,key_caps},
+	{0			,2*16	,1,0,K_CAPS,key_caps},
 	{5*8		,2*16	,0,0,0,key_row_3,key_row_3_shift},
 	{5*8 + 
 		11*16 + 
@@ -425,7 +425,7 @@ void IN_Commands (void)
 #endif
 
 	keyboard_scankeys();
-	if(key_touching_index == -1 || key_touching == 0)
+	if(key_touching_index == -1 && key_touching == 0)
 	{
 		if(key_down != -1)
 		{
@@ -454,18 +454,20 @@ void IN_Commands (void)
 	{
 		Key_Event(key,true);
 		key_down = key;
+
+		//check for shift
+		if(key == K_SHIFT)
+		{
+			key_in_shift = 1;
+		}
+		//check for caps
+		if(key == K_CAPS)
+		{
+			key_in_caps = key_in_caps ? 0 : 1;
+			return;
+		}
 	}
 
-	//check for shift
-	if(key_touching == &key_array[7])
-	{
-		key_in_shift = 1;
-	}
-	//check for caps
-	if(key_touching == &key_array[4])
-	{
-		key_in_caps = key_in_caps ? 0 : 1;
-	}
 }
 
 /*
