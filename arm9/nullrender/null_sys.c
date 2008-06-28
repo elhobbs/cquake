@@ -921,12 +921,44 @@ void read_cquake_ini(quakeparms_t    *parms)
 	parms->argc = com_argc;
 	parms->argv = com_argv;
 }
+#define DIR_LIST_COUNT 20
+void ds_choose_draw(char *dirlist[],int total,int pos)
+{
+	int i;
+	int start = (pos/DIR_LIST_COUNT)*DIR_LIST_COUNT;
+	int end = start + DIR_LIST_COUNT;
+
+	if(end > total)
+		end = total;
+#ifdef NDS
+	// Clear the screen
+	iprintf ("\x1b[2J");
+
+	iprintf("Choose a mod game directory\nA to select or B to cancel");
+	// Move to 2nd row
+	iprintf ("\x1b[2;0H");
+	// Print line of dashes
+	iprintf ("--------------------------------");
+	for(i = start;i < end;i++)
+	{
+		// Set row
+		iprintf ("\x1b[%d;0H", i-start + 3);
+		iprintf (" [%s]", dirlist[i]);
+	}
+	if(end < total)
+	{
+		// Set row
+		iprintf ("\x1b[%d;0H", i-start + 3);
+		iprintf (" more...", dirlist[i]);
+	}
+#endif
+}
 
 void ds_choose_game(char *base)
 {
 	char *buf;
-	char *dirlist[30];
-	int dircount = 0;
+	char *dirlist[DIR_LIST_COUNT*3];
+	int start,dircount = 0;
 	int pos = 0;
 	int len,pressed;
 	int i = COM_CheckParm ("-listgame");
@@ -945,14 +977,6 @@ void ds_choose_game(char *base)
 		else
 			dir = diropen (base); 
 
-		// Clear the screen
-		iprintf ("\x1b[2J");
-
-		iprintf("Choose a mod game directory\nA to select or B to cancel");
-		// Move to 2nd row
-		iprintf ("\x1b[2;0H");
-		// Print line of dashes
-		iprintf ("--------------------------------");
 
 		if (dir == NULL) {
 			iprintf ("Unable to open the directory.\n");
@@ -968,30 +992,30 @@ void ds_choose_game(char *base)
 					if(pos + len >= 4096)
 						break;
 
-					// Set row
-					iprintf ("\x1b[%d;0H", dircount + 3);
-					iprintf (" [%s]", filename);
-
 					dirlist[dircount++] = &buf[pos];
 					strcpy(&buf[pos],filename);
 					pos += len + 1;
 					
 				}
-				if(dircount >= 30)
+				if(dircount >= DIR_LIST_COUNT*3)
 					break;
 			}
 		}	
 		
 		dirclose (dir);	
 	}
-	pressed = pos = 0;
+
+	start = pressed = pos = 0;
+
+	ds_choose_draw(dirlist,dircount,pos);
+
 	while (true) {
 		// Clear old cursors
-		for (int i = 0; i < dircount; i++) {
+		for (int i = 0; i < DIR_LIST_COUNT; i++) {
 			iprintf ("\x1b[%d;0H ", i+3);
 		}
 		// Show cursor
-		iprintf ("\x1b[%d;0H*", pos + 3);
+		iprintf ("\x1b[%d;0H*", (pos%DIR_LIST_COUNT) + 3);
 		
 		// Power saving loop. Only poll the keys once per frame and sleep the CPU if there is nothing else to do
 		do {
@@ -1000,11 +1024,33 @@ void ds_choose_game(char *base)
 			swiWaitForVBlank();
 		} while (!pressed);
 	
-		if (pressed & KEY_UP) 		pos -= 1;
-		if (pressed & KEY_DOWN) 	pos += 1;
+		if (pressed & KEY_UP)
+		{
+			pos -= 1;
+			if (pos < 0)
+			{
+				pos = dircount - 1;		// Wrap around to bottom of list
+				ds_choose_draw(dirlist,dircount,pos);
+			}
+			else if(pos % DIR_LIST_COUNT == (DIR_LIST_COUNT-1))
+			{
+				ds_choose_draw(dirlist,dircount,pos);
+			}
+		}
+		if (pressed & KEY_DOWN)
+		{
+			pos += 1;
+			if (pos >= dircount)
+			{
+				pos = 0;		// Wrap around to top of list
+				ds_choose_draw(dirlist,dircount,pos);
+			}
+			else if(pos % DIR_LIST_COUNT == 0)
+			{
+				ds_choose_draw(dirlist,dircount,pos);
+			}
+		}
 		
-		if (pos < 0) 	pos = dircount - 1;		// Wrap around to bottom of list
-		if (pos >= dircount)	pos = 0;		// Wrap around to top of list
 		
 		if (pressed & KEY_A) {
 extern qboolean        com_modified;   // set true if using non-id files
