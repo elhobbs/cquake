@@ -86,6 +86,27 @@ void ED_ResetPool()
 {
 	edict_pool_count = -1;
 }
+
+edict_t * ed_create()
+{
+	edict_t *e;
+	if (sv.num_edicts == MAX_EDICTS)
+		Sys_Error ("ed_create: no free edicts");
+	if(edict_pool_count < 0)
+	{
+		edict_pool_count = edict_pool_chunk_size - 1;
+		edict_pool = (byte *)Hunk_AllocName((pr_edict_size+4) * edict_pool_chunk_size,"edchunk");
+		//memset(edict_pool,0xff,pr_edict_size * edict_pool_chunk_size);
+	}
+	
+	e = (edict_t *)(edict_pool + ((pr_edict_size+4) * edict_pool_count));	
+	ED_ClearEdict (e);
+	edict_pool_count--;
+
+	sv.edicts[sv.num_edicts] = e;
+	*EDICT_NUM_PTR(e) = sv.num_edicts++;
+	return e;
+}
 /*
 =================
 ED_Alloc
@@ -119,6 +140,8 @@ edict_t *ED_Alloc (void)
 	if (i == MAX_EDICTS)
 		Sys_Error ("ED_Alloc: no free edicts");
 
+	e = ed_create();
+#if 0
 	if(edict_pool_count < 0)
 	{
 		edict_pool_count = edict_pool_chunk_size - 1;
@@ -132,7 +155,7 @@ edict_t *ED_Alloc (void)
 
 	sv.edicts[sv.num_edicts] = e;
 	*EDICT_NUM_PTR(e) = sv.num_edicts++;
-
+#endif
 	return e;
 }
 
@@ -785,6 +808,7 @@ char *ED_NewString (char *string)
 }
 #endif
 
+edict_t *EDICT_NUM2(int n);
 /*
 =============
 ED_ParseEval
@@ -829,7 +853,7 @@ qboolean	ED_ParseEpair (void *base, ddef_t *key, char *s)
 		break;
 		
 	case ev_entity:
-		*(int *)d = EDICT_TO_PROG(EDICT_NUM(atoi (s)));
+		*(int *)d = EDICT_TO_PROG(EDICT_NUM2(atoi (s)));
 		break;
 		
 	case ev_field:
@@ -1161,8 +1185,19 @@ void PR_Init (void)
 
 edict_t *EDICT_NUM(int n)
 {
+	if (n < 0 || n >= sv.num_edicts)//sv.max_edicts)
+		Sys_Error ("EDICT_NUM: bad number %i", n);
+	return sv.edicts[n];
+}
+
+edict_t *EDICT_NUM2(int n)
+{
 	if (n < 0 || n >= sv.max_edicts)
 		Sys_Error ("EDICT_NUM: bad number %i", n);
+	while(sv.num_edicts <= n && sv.num_edicts < sv.max_edicts)
+	{
+		ed_create();
+	}
 	return sv.edicts[n];
 }
 
