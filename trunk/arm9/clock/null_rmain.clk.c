@@ -56,20 +56,69 @@ double Sys_FloatTime (void)
 {
 	return ((TIMER1_DATA*(1<<16))+TIMER0_DATA)/32728.5;
 }
+
+void ds_rotate_x(float angle) {
+	int sine = sin(angle* (M_PI*2 / 360))*(1<<12);
+	int cosine = cos(angle* (M_PI*2 / 360))*(1<<12);
+	
+	MATRIX_MULT3x3 = inttof32(1);
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = 0;
+	
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = cosine;
+	MATRIX_MULT3x3 = sine;
+	
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = -sine;
+	MATRIX_MULT3x3 = cosine;
+}
+void ds_rotate_y(float angle) {
+	int sine = sin(angle* (M_PI*2 / 360))*(1<<12);
+	int cosine = cos(angle* (M_PI*2 / 360))*(1<<12);
+	
+	MATRIX_MULT3x3 = cosine;
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = -sine;
+	
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = inttof32(1);
+	MATRIX_MULT3x3 = 0;
+	
+	MATRIX_MULT3x3 = sine;
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = cosine;
+}
+void ds_rotate_z(float angle) {
+	int sine = sin(angle* (M_PI*2 / 360))*(1<<12);
+	int cosine = cos(angle* (M_PI*2 / 360))*(1<<12);
+	
+	MATRIX_MULT3x3 = cosine;
+	MATRIX_MULT3x3 = sine;
+	MATRIX_MULT3x3 = 0;
+	
+	MATRIX_MULT3x3 = - sine;
+	MATRIX_MULT3x3 = cosine;
+	MATRIX_MULT3x3 = 0;
+	
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = 0;
+	MATRIX_MULT3x3 = inttof32(1);
+}
 #endif
 
 void R_RotateForEntity (entity_t *e)
 {
 #ifdef NDS
     glTranslate3f32 (floattodsv16(e->origin[0]),  floattodsv16(e->origin[1]),  floattodsv16(e->origin[2]));
-#if 1
+#if 0
     glRotatef (-e->angles[1],  0, 0, 1);
     glRotatef (e->angles[0],  0, 1, 0);
     glRotatef (-e->angles[2],  1, 0, 0);
 #else
-    glRotateX (e->angles[2]);//,  0, 0, 1);
-    glRotateY (-e->angles[0]);//,  0, 1, 0);
-    glRotateZ (e->angles[1]);//,  1, 0, 0);
+    ds_rotate_z (e->angles[1]);//,  0, 0, 1);
+    ds_rotate_y (-e->angles[0]);//,  0, 1, 0);
+    ds_rotate_x (e->angles[2]);//,  1, 0, 0);
 #endif
 #endif
 }
@@ -231,6 +280,7 @@ void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect)
 	//R_SetVrect (pvrect, &r_refdef.vrect, lineadj);
 
 	MYgluPerspective (r_refdef.fov_y,  aspect,  0.005,  40.0);
+	//MYgluPerspective (r_refdef.fov_y,  aspect,  1.0f,  40.0);
 
 	x = r_refdef.vrect.x;
 	x2 = (r_refdef.vrect.x + r_refdef.vrect.width) - 1;
@@ -1252,7 +1302,7 @@ void R_SetupFrame (void)
 	// Set the current matrix to be the model matrix
 	glMatrixMode(GL_MODELVIEW);
 	
-#if 1
+#if 0
 	//Push our original Matrix onto the stack (save state)
 	//glPushMatrix();
 	r_modelview[0] = (int)(r_vright[0]*(1<<12));

@@ -1237,6 +1237,7 @@ typedef struct searchpath_s
 } searchpath_t;
 
 searchpath_t    *com_searchpaths;
+int com_searchpaths_count = 0;
 
 /*
 ============
@@ -1380,6 +1381,9 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 		if (!strcmp(filename, "progs.dat")) {
 			for(;search;search=search->next)
 			{
+				if(search->pack)
+					continue;
+
 				sprintf (netpath, "%s/%s",search->filename, filename);
 				Con_DPrintf ("%s\n",netpath);
 				findtime = Sys_FileTime (netpath);
@@ -1395,6 +1399,7 @@ int COM_FindFile (char *filename, int *handle, FILE **file)
 					}
 					return com_filesize;
 				}
+				break;
 			}
 			search = com_searchpaths;
 		}
@@ -1784,6 +1789,7 @@ void COM_AddGameDirectory (char *dir)
 	strcpy (search->filename, dir);
 	search->next = com_searchpaths;
 	com_searchpaths = search;
+	com_searchpaths_count++;
 
 //
 // add any pak files in the format pak0.pak pak1.pak, ...
