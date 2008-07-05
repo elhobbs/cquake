@@ -212,11 +212,12 @@ SPRITE MODELS
 // FIXME: shorten these?
 typedef struct mspriteframe_s
 {
-	int		width;
-	int		height;
+	short		width;
+	short		height;
 	//void	*pcachespot;			// remove?
 	float	up, down, left, right;
-	byte	pixels[4];
+	dstex_t				ds;
+	//byte	pixels[4];
 } mspriteframe_t;
 
 typedef struct

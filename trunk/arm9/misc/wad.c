@@ -157,6 +157,25 @@ automatic byte swapping
 
 void SwapPic (qpic_t *pic)
 {
+	byte *buf;
+	int i,n;
 	pic->width = LittleLong(pic->width);
-	pic->height = LittleLong(pic->height);	
+	pic->height = LittleLong(pic->height);
+
+	n = pic->width * pic->height;
+	buf = &pic->data[0];
+	for(i=0;i<n;i++)
+	{
+		switch(*buf)
+		{
+		case 0:
+			*buf = 255;
+			break;
+		case 255:
+			*buf = 0;
+			break;
+		}
+		buf++;
+	}
+
 }

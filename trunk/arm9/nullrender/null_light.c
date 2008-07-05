@@ -74,7 +74,8 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 	float		dist;
 	msurface_t	*surf;
 	int			i;
-	bmodel_t *model;
+extern bmodel_t	*r_currentbmodel;
+	//bmodel_t *model;
 	
 	if (node->contents < 0)
 		return;
@@ -94,8 +95,8 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 	}
 		
 // mark the polygons
-	model = (bmodel_t *)cl.worldmodel->cache.data;
-	surf = model->surfaces + node->firstsurface;
+	//model = (bmodel_t *)cl.worldmodel->cache.data;
+	surf = r_currentbmodel->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
 		if (surf->dlightframe != r_dlightframecount)
@@ -120,18 +121,20 @@ void R_PushDlights (void)
 {
 	int		i;
 	dlight_t	*l;
-	bmodel_t *model;
+extern bmodel_t	*r_currentbmodel;
+	//bmodel_t *model;
 
 	r_dlightframecount = r_framecount + 1;	// because the count hasn't
 											//  advanced yet for this frame
 	l = cl_dlights;
 
-	model = (bmodel_t *)cl.worldmodel->cache.data;
+	//model = (bmodel_t *)cl.worldmodel->cache.data;
+	r_currentbmodel = (bmodel_t *)cl.worldmodel->cache.data;
 	for (i=0 ; i<MAX_DLIGHTS ; i++, l++)
 	{
 		if (l->die < cl.time || !l->radius)
 			continue;
-		R_MarkLights ( l, 1<<i, model->nodes );
+		R_MarkLights ( l, 1<<i, r_currentbmodel->nodes );
 	}
 }
 
@@ -215,8 +218,8 @@ int RecursiveLightPoint (mnode_t *node, vec3_t start, vec3_t end)
 		y = CALC_COORD(pt,v);
 		x = (x-ss)>>4;
 		y = (y-tt)>>4;
-		x = (x * xs)>>20;
-		y = (y * ys)>>20;
+		x = (x * xs)>>16;//20;
+		y = (y * ys)>>16;//20;
 
 /*		s = DotProduct (mid, tex->vecs[0]) + tex->vecs[0][3];
 		t = DotProduct (mid, tex->vecs[1]) + tex->vecs[1][3];;

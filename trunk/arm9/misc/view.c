@@ -742,8 +742,8 @@ void CalcGunAngle (void)
 	oldyaw = yaw;
 	oldpitch = pitch;
 
-	cl.viewent.angles[YAW] = r_refdef.viewangles[YAW] + yaw;
-	cl.viewent.angles[PITCH] = - (r_refdef.viewangles[PITCH] + pitch);
+	cl.viewent.angles[YAW] = yaw;//r_refdef.viewangles[YAW] + yaw;
+	cl.viewent.angles[PITCH] = - pitch;//(r_refdef.viewangles[PITCH] + pitch);
 
 	cl.viewent.angles[ROLL] -= v_idlescale.value * sin(cl.time*v_iroll_cycle.value) * v_iroll_level.value;
 	cl.viewent.angles[PITCH] -= v_idlescale.value * sin(cl.time*v_ipitch_cycle.value) * v_ipitch_level.value;
@@ -916,20 +916,27 @@ void V_CalcRefdef (void)
 	V_BoundOffsets ();
 		
 // set up gun position
-	VectorCopy (cl.viewangles, view->angles);
+	//VectorCopy (cl.viewangles, view->angles);
+	view->angles[0] = 0;
+	view->angles[1] = 0;
+	view->angles[2] = 0;
 	
-	CalcGunAngle ();
+	//CalcGunAngle ();
 
-	VectorCopy (ent->origin, view->origin);
-	view->origin[2] += cl.viewheight;
+	//VectorCopy (ent->origin, view->origin);
+	view->origin[0] = 0;
+	view->origin[1] = 0;
+	view->origin[2] = 0;
+	//view->origin[2] += cl.viewheight;
 
-	for (i=0 ; i<3 ; i++)
+	/*for (i=0 ; i<3 ; i++)
 	{
 		view->origin[i] += forward[i]*bob*0.4;
 //		view->origin[i] += right[i]*bob*0.4;
 //		view->origin[i] += up[i]*bob*0.8;
-	}
-	view->origin[2] += bob;
+	}*/
+	view->origin[0] += bob*0.4;
+	//view->origin[2] -= bob;
 
 // fudge position around to keep amount of weapon visible
 // roughly equal with different FOV
@@ -966,7 +973,7 @@ if (cl.onground && ent->origin[2] - oldz > 0)
 	if (ent->origin[2] - oldz > 12)
 		oldz = ent->origin[2] - 12;
 	r_refdef.vieworg[2] += oldz - ent->origin[2];
-	view->origin[2] += oldz - ent->origin[2];
+	//view->origin[2] += oldz - ent->origin[2];
 }
 else
 	oldz = ent->origin[2];
