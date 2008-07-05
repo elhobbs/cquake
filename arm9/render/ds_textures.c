@@ -749,3 +749,48 @@ void ds_precache_bsp_textures(model_t *mod)
 	}
 	Con_DPrintf("\n");
 }
+
+int ds_load_sprite_texture(model_t *mod,mspriteframe_t *pspriteframe)
+{
+	int handle, length, size, block, w, h, i;
+	byte *buf,*addr,*dst;
+
+	block = ds_is_texture_resident(&pspriteframe->ds);
+	if(block != -1)
+	{
+		ds_textures[block].visframe = r_framecount;
+		return ds_textures[block].texnum;
+	}
+	Con_DPrintf("%s %d %d\n",pspriteframe->ds.name,pspriteframe->ds.width,pspriteframe->ds.height);
+
+	size = pspriteframe->width * pspriteframe->height;
+	{
+		w = pspriteframe->ds.width;
+		h = pspriteframe->ds.height;
+		length = COM_OpenFile(mod->name,&handle);
+		if(length == -1)
+		{
+			//Sys_Error ("Mod_NumForName: %s not found", mod->name);
+			return 0;
+		}
+		buf = COM_LoadTempFilePartExtra(handle,pspriteframe->ds.file_offset,size,pspriteframe->ds.width*pspriteframe->ds.height);
+		COM_CloseFile(handle);
+		if(buf == 0)
+			return 0;
+		dst = buf + size;
+
+		dst = ds_scale_texture(&pspriteframe->ds,pspriteframe->width,pspriteframe->height,buf,dst);
+		
+		buf = dst;
+		for(i=0;i<w*h;i++)
+		{
+			if(*buf == 0)
+				*buf = 255;
+			else if(*buf == 255)
+				*buf = 0;
+			buf++;
+		}
+	}
+
+	return ds_loadTexture(&pspriteframe->ds,w,h,dst,1);
+}

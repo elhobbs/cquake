@@ -79,6 +79,9 @@ cvar_t	pausable = {"pausable","1"};
 
 cvar_t	temp1 = {"temp1","0"};
 
+cvar_t	tempv1 = {"v1","0"};
+cvar_t	tempv2 = {"v2","0"};
+cvar_t	tempv3 = {"v3","0"};
 
 /*
 ================
@@ -232,6 +235,10 @@ void Host_InitLocal (void)
 	Cvar_RegisterVariable (&pausable);
 
 	Cvar_RegisterVariable (&temp1);
+
+	Cvar_RegisterVariable (&tempv1);
+	Cvar_RegisterVariable (&tempv2);
+	Cvar_RegisterVariable (&tempv3);
 
 	Host_FindMaxClients ();
 	

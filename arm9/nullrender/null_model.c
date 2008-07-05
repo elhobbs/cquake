@@ -1975,6 +1975,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 }
 
 //=============================================================================
+byte *load_sprite_buffer;
 
 /*
 =================
@@ -2003,6 +2004,10 @@ void * Mod_LoadSpriteFrame (void * pin, mspriteframe_t **ppframe)
 
 	pspriteframe->width = width;
 	pspriteframe->height = height;
+	pspriteframe->ds.width = ds_adjust_size(width);
+	pspriteframe->ds.height = ds_adjust_size(height);
+	pspriteframe->ds.name = 0;
+	pspriteframe->ds.file_offset = ((byte *)(pinframe + 1)) - load_sprite_buffer;
 	origin[0] = LittleLong (pinframe->origin[0]);
 	origin[1] = LittleLong (pinframe->origin[1]);
 
@@ -2093,6 +2098,7 @@ void Mod_LoadSpriteModel (model_t *mod, void *buffer)
 	dspriteframetype_t	*pframetype;
 	
 	pin = (dsprite_t *)buffer;
+	load_sprite_buffer = (byte *)buffer;
 
 	version = LittleLong (pin->version);
 	if (version != SPRITE_VERSION)

@@ -174,7 +174,71 @@ void R_SetAliasFrame(aliashdr_t *paliashdr) {
 	//Con_Printf("  %d %d\n",f_frame,f_frameofs);
 	//Con_Printf("  %d\n",paliashdr->frames[frame].type);
 }
+
 int R_LightPoint (vec3_t p);
+
+void ds_lightpoint(vec3_t p)
+{
+int ambientlight,shadelight,lnum;
+float add;
+	vec3_t dist;
+
+	//
+	// get lighting information
+	//
+	if (!strcmp (r_currentmodel->name, "progs/flame2.mdl")
+		|| !strcmp (r_currentmodel->name, "progs/flame.mdl") )
+	{
+#ifdef NDS
+		glColor3b(255,255,255);
+#endif
+		return;
+	}
+
+	ambientlight = shadelight = R_LightPoint (p);
+
+	// allways give the gun some light
+	if (r_currententity == &cl.viewent && ambientlight < 32)
+		ambientlight = shadelight = 32;
+
+	for (lnum=0 ; lnum<MAX_DLIGHTS ; lnum++)
+	{
+		if (cl_dlights[lnum].die >= cl.time)
+		{
+			VectorSubtract (p,
+							cl_dlights[lnum].origin,
+							dist);
+			add = cl_dlights[lnum].radius - Length(dist);
+
+			if (add > 0) {
+				ambientlight += add;
+				//ZOID models should be affected by dlights as well
+				shadelight += add;
+			}
+		}
+	}
+	if(shadelight > 192)
+		shadelight = 192;
+	else if(shadelight < 8)
+		shadelight = 8;
+#if 0
+	// clamp lighting so it doesn't overbright as much
+	if (ambientlight > 128)
+		ambientlight = 128;
+	if (ambientlight + shadelight > 192)
+		shadelight = 192 - ambientlight;
+#endif
+/*
+// ZOID: never allow players to go totally black
+	i = r_currententity - cl_entities;
+	if (i >= 1 && i<=cl.maxclients)
+		if (ambientlight < 8)
+			ambientlight = shadelight = 8;
+*/
+#ifdef NDS
+	glColor3b(shadelight,shadelight,shadelight);
+#endif
+}
 
 	extern int r_alias_tri;
 void R_DrawAliasModel ()
@@ -184,9 +248,7 @@ void R_DrawAliasModel ()
 	mdl_t 		*pmdl;
 	trivertx_t	*index0,*index1,*index2;
 	mstvert_t	*st0,*st1,*st2;
-	int ambientlight,shadelight,lnum;
-	vec3_t dist;
-	float add;
+
 	short mins[3],maxs[3];
 	short ax0,ay0,az0;
 	short ax1,ay1,az1;
@@ -208,18 +270,23 @@ void R_DrawAliasModel ()
 	
 	
 
-#if 1
 	for(i=0;i<3;i++) {
 		mins[i] = (short)(r_currententity->origin[i] + r_currentmodel->mins[i]);
 		maxs[i] = (short)(r_currententity->origin[i] + r_currentmodel->maxs[i]);
 	}
 
-	if (R_CullBox (mins, maxs))
+	if (r_currententity == &cl.viewent)
+	{
+		ds_lightpoint(r_refdef.vieworg);
+	}
+	else if (R_CullBox (mins, maxs))
 	{
 		return;
-		//Con_Printf("a");
 	}
-#endif
+	else
+	{
+		ds_lightpoint(r_currententity->origin);
+	}
 
 #if 0
 	if (r_currententity != &cl.viewent)
@@ -227,46 +294,6 @@ void R_DrawAliasModel ()
 	else
 		r_ziscale = (float)0x8000 * (float)0x10000 * 3.0;
 #endif
-	//
-	// get lighting information
-	//
-
-	ambientlight = shadelight = R_LightPoint (r_currententity->origin);
-
-	// allways give the gun some light
-	if (r_currententity == &cl.viewent && ambientlight < 32)
-		ambientlight = shadelight = 32;
-
-	for (lnum=0 ; lnum<MAX_DLIGHTS ; lnum++)
-	{
-		if (cl_dlights[lnum].die >= cl.time)
-		{
-			VectorSubtract (r_currententity->origin,
-							cl_dlights[lnum].origin,
-							dist);
-			add = cl_dlights[lnum].radius - Length(dist);
-
-			if (add > 0) {
-				ambientlight += add;
-				//ZOID models should be affected by dlights as well
-				shadelight += add;
-			}
-		}
-	}
-
-	// clamp lighting so it doesn't overbright as much
-	if (ambientlight > 128)
-		ambientlight = 128;
-	if (ambientlight + shadelight > 192)
-		shadelight = 192 - ambientlight;
-
-/*
-// ZOID: never allow players to go totally black
-	i = r_currententity - cl_entities;
-	if (i >= 1 && i<=cl.maxclients)
-		if (ambientlight < 8)
-			ambientlight = shadelight = 8;
-*/
 	 i = 0;
 	//
 	// locate the proper data
@@ -328,7 +355,7 @@ void R_DrawAliasModel ()
 #ifdef NDS
 	glPushMatrix ();
 
-	R_RotateForEntity (r_currententity);
+		R_RotateForEntity (r_currententity);
 
 #define fvectodsv16(n)        ((n) >> 14)
 		glTranslate3f32(floattodsv16(pmdl->scale_origin[0]),
@@ -340,10 +367,6 @@ void R_DrawAliasModel ()
 //r_pverts = (trivertx_t*)(((u32)r_pverts) | 0x0400000);
 //r_pstverts = (mstvert_t*)(((u32)r_pstverts) | 0x0400000);
 //r_ptri = (mtriangle_t*)(((u32)r_ptri) | 0x0400000);
-	if (!strcmp (r_currentmodel->name, "progs/flame2.mdl")
-		|| !strcmp (r_currentmodel->name, "progs/flame.mdl") )
-		ambientlight = shadelight = 255;
-		glColor3b(shadelight,shadelight,shadelight);
 	glBegin(GL_TRIANGLES);
 #endif	
 	for(i=0;i<r_numtri;i++) {
@@ -405,6 +428,9 @@ void R_DrawAliasModel ()
 
 #endif
 }
+extern cvar_t	tempv1;
+extern cvar_t	tempv2;
+extern cvar_t	tempv3;
 
 void R_DrawViewModel (void)
 {
@@ -416,13 +442,13 @@ void R_DrawViewModel (void)
 	dlight_t	*dl;
 	int			ambientlight, shadelight;
 
-	/*if (!r_drawviewmodel.value)
-		return;
+	//if (!r_drawviewmodel.value)
+	//	return;
 
 	if (chase_active.value)
 		return;
 
-	if (envmap)
+	/*if (envmap)
 		return;*/
 
 	if (!r_drawentities.value)
@@ -474,7 +500,20 @@ void R_DrawViewModel (void)
 	MYgluPerspective (r_refdef.fov_y,  vid.aspect,  0.005,  40.0*0.3);
 	glMatrixMode(GL_MODELVIEW);
 #endif
+	//glPushMatrix();
+	//glLoadIdentity();
+#ifdef NDS
+	glRestoreMatrix(3);
+	//glScalef(1,1,-1);
+	glRotateX(tempv1.value);
+	glRotateY(tempv2.value);
+	glRotateZ(tempv3.value);
+#endif
 	R_DrawAliasModel ();
+#ifdef NDS
+	glRestoreMatrix(4);
+#endif
+	//glPopMatrix (1);
 	//glDepthRange (gldepthmin, gldepthmax);
 }
 

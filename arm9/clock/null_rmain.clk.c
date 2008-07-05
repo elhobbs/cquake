@@ -1333,11 +1333,13 @@ void R_SetupFrame (void)
 	glLoadIdentity();
 	glRotateX(-90);
 	glRotateZ(90);//r_angle[2]);
+	glStoreMatrix(3);
 	glRotateX(-r_refdef.viewangles[2]);//r_angle[1]);
 	glRotateY(-r_refdef.viewangles[0]);//r_angle[0]);
 	glRotateZ(-r_refdef.viewangles[1]);//r_angle[2]);
 #define floattodsv16(n)       ((int)((n) * (1 << 2)))
 	glTranslate3f32(-floattodsv16(r_refdef.vieworg[0]),-floattodsv16(r_refdef.vieworg[1]),-floattodsv16(r_refdef.vieworg[2]));
+	glStoreMatrix(4);
 #endif
 #endif
 
@@ -1468,6 +1470,158 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 #endif
 }
 
+mspriteframe_t *R_GetSpriteFrame ()
+{
+	msprite_t		*psprite;
+	mspritegroup_t	*pspritegroup;
+	mspriteframe_t	*pspriteframe;
+	int				i, numframes, frame;
+	float			*pintervals, fullinterval, targettime, time;
+
+	psprite = (msprite_t *)r_currententity->model->cache.data;
+	frame = r_currententity->frame;
+
+	if ((frame >= psprite->numframes) || (frame < 0))
+	{
+		Con_Printf ("R_DrawSprite: no such frame %d\n", frame);
+		frame = 0;
+	}
+
+	if (psprite->frames[frame].type == SPR_SINGLE)
+	{
+		pspriteframe = psprite->frames[frame].frameptr;
+	}
+	else
+	{
+		pspritegroup = (mspritegroup_t *)psprite->frames[frame].frameptr;
+		pintervals = pspritegroup->intervals;
+		numframes = pspritegroup->numframes;
+		fullinterval = pintervals[numframes-1];
+
+		time = cl.time + r_currententity->syncbase;
+
+	// when loading in Mod_LoadSpriteGroup, we guaranteed all interval values
+	// are positive, so we don't have to worry about division by 0
+		targettime = time - ((int)(time / fullinterval)) * fullinterval;
+
+		for (i=0 ; i<(numframes-1) ; i++)
+		{
+			if (pintervals[i] > targettime)
+				break;
+		}
+
+		pspriteframe = pspritegroup->frames[i];
+	}
+
+	return pspriteframe;
+}
+
+int ds_load_sprite_texture(model_t *mod,mspriteframe_t *pspriteframe);
+#if 1
+static char sprite_skin_name[128];
+
+void R_DrawSpriteModel ()
+{
+	vec3_t	point;
+	mspriteframe_t	*frame;
+	float		*up, *right;
+	vec3_t		v_forward, v_right, v_up,org,ang;
+	msprite_t		*psprite;
+	int i,texnum;
+
+	// don't even bother culling, because it's just a single
+	// polygon without a surface cache
+	frame = R_GetSpriteFrame ();
+	psprite = (msprite_t*)r_currententity->model->cache.data;
+
+	if(frame->ds.name == 0)
+	{
+		sprintf(sprite_skin_name,"%s_%d",r_currentmodel->name,frame->ds.file_offset);
+		frame->ds.name = ED_NewString(sprite_skin_name);
+		if(!r_currentmodel->cache.data)
+		{
+			Sys_Error("R_DrawSpriteModel: unloaded model\n");
+		}
+	}
+
+	texnum = ds_load_sprite_texture(r_currentmodel,frame);
+#ifdef NDS
+	GFX_TEX_FORMAT = texnum;
+#endif
+
+	if (psprite->type == SPR_ORIENTED)
+	{	// bullet marks on walls
+		for(i=0;i<3;i++) {
+			org[i] = r_currententity->origin[i];
+			ang[i] = r_currententity->angles[i];
+		}
+		AngleVectors(ang, v_forward, v_right, v_up);
+		up = v_up;
+		right = v_right;
+	}
+	else
+	{	// normal sprite
+		for(i=0;i<3;i++) {
+			org[i] = r_currententity->origin[i];
+		}
+		up = r_vup;
+		right = r_vright;
+	}
+
+	//glColor3f (1,1,1);
+
+	//GL_DisableMultitexture();
+//r_currententity->angles[0] = -r_currententity->angles[0];	// stupid quake bug
+	//F_RotateForEntity (fcurrententity);
+//r_currententity->angles[0] = -r_currententity->angles[0];	// stupid quake bug
+
+	//DS_BindTexture( frame->ndstexnum);
+
+	//glEnable (GL_ALPHA_TEST);
+#ifdef NDS
+	glBegin (GL_QUADS);
+
+#define fv16(n)        (short)(((n) * (1<<2)))
+
+	DS_TEXCOORD2T16 (0,(frame->ds.height<<4));
+	VectorMA(org, (frame->down), up, point);
+	VectorMA(point, (frame->left), right, point);
+	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
+	glVertex3v16 (fv16(point[0]),
+		fv16(point[1]),
+		fv16(point[2]));
+
+	DS_TEXCOORD2T16 (0, 0);
+	VectorMA(org, (frame->up), up, point);
+	VectorMA(point, (frame->left), right, point);
+	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
+	glVertex3v16 (fv16(point[0]),
+		fv16(point[1]),
+		fv16(point[2]));
+
+	DS_TEXCOORD2T16 ((frame->ds.width<<4), 0);
+	VectorMA(org, (frame->up), up, point);
+	VectorMA(point, (frame->right), right, point);
+	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
+	glVertex3v16 (fv16(point[0]),
+		fv16(point[1]),
+		fv16(point[2]));
+
+	DS_TEXCOORD2T16 ((frame->ds.width<<4), (frame->ds.height<<4));
+	VectorMA(org, (frame->down), up, point);
+	VectorMA(point, (frame->right), right, point);
+	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
+	glVertex3v16 (fv16(point[0]),
+		fv16(point[1]),
+		fv16(point[2]));
+	
+	glEnd ();
+#endif
+
+	//glDisable (GL_ALPHA_TEST);
+}
+#endif
+
 void R_DrawAliasModel ();
 
 void R_DrawEntitiesOnList (void)
@@ -1531,16 +1685,17 @@ void R_DrawEntitiesOnList (void)
 		}
 	}
 #endif
-#if 0
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(4));
+#if 1
+	//glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(4));
 	for (i=0 ; i<cl_numvisedicts ; i++)
 	{
-		fcurrententity = cl_visedicts[i];
+		r_currententity = cl_visedicts[i];
+		r_currentmodel = r_currententity->model;
 
-		switch (fcurrententity->model->type)
+		switch (r_currententity->model->type)
 		{
 		case mod_sprite:
-			F_DrawSpriteModel ();
+			R_DrawSpriteModel ();
 			break;
 		}
 	}
