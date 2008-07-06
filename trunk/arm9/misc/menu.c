@@ -508,10 +508,10 @@ void M_Load_Draw (void)
 	M_DrawPic ( (CON_SCREEN_WIDTH-p->width)/2, 4, p);
 
 	for (i=0 ; i< MAX_SAVEGAMES; i++)
-		M_Print (16, 32 + 8*i, m_filenames[i]);
+		M_Print (8, 32 + 8*i, m_filenames[i]);
 
 // line cursor
-	M_DrawCharacter (8, 32 + load_cursor*8, 12+((int)(realtime*4)&1));
+	M_DrawCharacter (0, 32 + load_cursor*8, 12+((int)(realtime*4)&1));
 }
 
 
@@ -524,10 +524,10 @@ void M_Save_Draw (void)
 	M_DrawPic ( (CON_SCREEN_WIDTH-p->width)/2, 4, p);
 
 	for (i=0 ; i<MAX_SAVEGAMES ; i++)
-		M_Print (16, 32 + 8*i, m_filenames[i]);
+		M_Print (8, 32 + 8*i, m_filenames[i]);
 
 // line cursor
-	M_DrawCharacter (8, 32 + load_cursor*8, 12+((int)(realtime*4)&1));
+	M_DrawCharacter (0, 32 + load_cursor*8, 12+((int)(realtime*4)&1));
 }
 
 
@@ -560,6 +560,7 @@ void M_Load_Key (int k)
 	case K_LEFTARROW:
 	case K_NDS_UP:
 		S_LocalSound ("misc/menu1.wav");
+		M_DrawCharacter (0, 32 + load_cursor*8, ' ');
 		load_cursor--;
 		if (load_cursor < 0)
 			load_cursor = MAX_SAVEGAMES-1;
@@ -569,6 +570,7 @@ void M_Load_Key (int k)
 	case K_RIGHTARROW:
 	case K_NDS_DOWN:
 		S_LocalSound ("misc/menu1.wav");
+		M_DrawCharacter (0, 32 + load_cursor*8, ' ');
 		load_cursor++;
 		if (load_cursor >= MAX_SAVEGAMES)
 			load_cursor = 0;
@@ -597,6 +599,7 @@ void M_Save_Key (int k)
 	case K_LEFTARROW:
 	case K_NDS_UP:
 		S_LocalSound ("misc/menu1.wav");
+		M_DrawCharacter (0, 32 + load_cursor*8, ' ');
 		load_cursor--;
 		if (load_cursor < 0)
 			load_cursor = MAX_SAVEGAMES-1;
@@ -605,6 +608,7 @@ void M_Save_Key (int k)
 	case K_DOWNARROW:
 	case K_RIGHTARROW:
 	case K_NDS_DOWN:
+		M_DrawCharacter (0, 32 + load_cursor*8, ' ');
 		S_LocalSound ("misc/menu1.wav");
 		load_cursor++;
 		if (load_cursor >= MAX_SAVEGAMES)
