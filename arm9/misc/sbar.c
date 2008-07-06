@@ -64,6 +64,8 @@ qpic_t      *hsb_items[2];
 void Sbar_MiniDeathmatchOverlay (void);
 void Sbar_DeathmatchOverlay (void);
 void M_DrawPic (int x, int y, qpic_t *pic);
+void Draw_TransPicScale (int x, int y, qpic_t *pic);
+void Draw_PicScale (int x, int y, qpic_t *pic);
 
 /*
 ===============
@@ -1156,7 +1158,7 @@ void Sbar_IntermissionNumber (int x, int y, int num, int digits, int color)
 	if (l > digits)
 		ptr += (l-digits);
 	if (l < digits)
-		x += (digits-l)*24;
+		x += (digits-l)*20;
 
 	while (*ptr)
 	{
@@ -1165,8 +1167,8 @@ void Sbar_IntermissionNumber (int x, int y, int num, int digits, int color)
 		else
 			frame = *ptr -'0';
 
-		Draw_TransPic (x,y,sb_nums[color][frame]);
-		x += 24;
+		Draw_TransPicScale (x,y,sb_nums[color][frame]);
+		x += 20;
 		ptr++;
 	}
 }
@@ -1328,6 +1330,7 @@ void Sbar_IntermissionOverlay (void)
 	qpic_t	*pic;
 	int		dig;
 	int		num;
+	int		x,xx;
 
 	scr_copyeverything = 1;
 	scr_fullupdate = 0;
@@ -1341,25 +1344,30 @@ void Sbar_IntermissionOverlay (void)
 	show_overlay(true,false);
 
 	pic = Draw_CachePic ("gfx/complete.lmp");
-	Draw_Pic ((vid.conwidth*0.5f)-94, (vid.conheight*0.5f) - 96, pic);
+	Draw_PicScale ((vid.conwidth*0.5f)-(pic->width*256/320/2), 4, pic);
 
 	pic = Draw_CachePic ("gfx/inter.lmp");
-	Draw_TransPic ((vid.conwidth*0.5f)-160, (vid.conheight*0.5f) - 64, pic);
+	x = 8;
+	Draw_TransPicScale (x, (vid.conheight*0.5f) - 64, pic);
+	x += (pic->width*256/320) - 40;
 
+	xx = x;
 	dig = cl.completed_time/60;
-	Sbar_IntermissionNumber (vid.conwidth*0.5f, (vid.conheight*0.5f) - 56, dig, 3, 0);
+	Sbar_IntermissionNumber (xx, (vid.conheight*0.5f) - 56, dig, 3, 0);
 	num = cl.completed_time - dig*60;
-	Draw_TransPic ((vid.conwidth*0.5f)+74 ,(vid.conheight*0.5f)- 56,sb_colon);
-	Draw_TransPic ((vid.conwidth*0.5f)+86 ,(vid.conheight*0.5f)- 56,sb_nums[0][num/10]);
-	Draw_TransPic ((vid.conwidth*0.5f)+106,(vid.conheight*0.5f)- 56,sb_nums[0][num%10]);
+	Draw_TransPicScale (xx+60,(vid.conheight*0.5f)- 56,sb_colon);
+	Draw_TransPicScale (xx+80 ,(vid.conheight*0.5f)- 56,sb_nums[0][num/10]);
+	Draw_TransPicScale (xx+100,(vid.conheight*0.5f)- 56,sb_nums[0][num%10]);
 
-	Sbar_IntermissionNumber ((vid.conwidth*0.5f), (vid.conheight*0.5f)- 16, cl.stats[STAT_SECRETS], 3, 0);
-	Draw_TransPic ((vid.conwidth*0.5f)+72,(vid.conheight*0.5f)- 16,sb_slash);
-	Sbar_IntermissionNumber ((vid.conwidth*0.5f)+80, (vid.conheight*0.5f)- 16, cl.stats[STAT_TOTALSECRETS], 3, 0);
+	xx = x;
+	Sbar_IntermissionNumber (xx, (vid.conheight*0.5f)- 16, cl.stats[STAT_SECRETS], 3, 0);
+	Draw_TransPicScale (xx+60,(vid.conheight*0.5f)- 16,sb_slash);
+	Sbar_IntermissionNumber (xx+80, (vid.conheight*0.5f)- 16, cl.stats[STAT_TOTALSECRETS], 3, 0);
 
-	Sbar_IntermissionNumber ((vid.conwidth*0.5f), (vid.conheight*0.5f)+ 24, cl.stats[STAT_MONSTERS], 3, 0);
-	Draw_TransPic ((vid.conwidth*0.5f)+72,(vid.conheight*0.5f)+ 24,sb_slash);
-	Sbar_IntermissionNumber ((vid.conwidth*0.5f)+80, (vid.conheight*0.5f)+ 24, cl.stats[STAT_TOTALMONSTERS], 3, 0);
+	xx = x;
+	Sbar_IntermissionNumber (xx, (vid.conheight*0.5f)+ 24, cl.stats[STAT_MONSTERS], 3, 0);
+	Draw_TransPicScale (xx+60,(vid.conheight*0.5f)+ 24,sb_slash);
+	Sbar_IntermissionNumber (xx+80, (vid.conheight*0.5f)+ 24, cl.stats[STAT_TOTALMONSTERS], 3, 0);
 }
 
 
@@ -1377,5 +1385,5 @@ void Sbar_FinaleOverlay (void)
 
 	show_overlay(true,false);
 	pic = Draw_CachePic ("gfx/finale.lmp");
-	Draw_TransPic ( (vid.conwidth-pic->width)/2, 16, pic);
+	Draw_TransPicScale ( (vid.conwidth*0.5f)-(pic->width*256/320/2), 4, pic);
 }
