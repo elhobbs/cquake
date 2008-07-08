@@ -405,8 +405,10 @@ void S_EndPrecaching (void)
 {
 }
 
+void IN_Accumulate (void);
 void S_ExtraUpdate (void)
 {
+	IN_Accumulate();
 }
 
 void S_LocalSound (char *s)

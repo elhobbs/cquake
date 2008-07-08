@@ -67,6 +67,7 @@ keyname_t keynames[] =
 	{"DSUP", K_NDS_UP},
 	{"DSDOWN", K_NDS_DOWN},
 	{"DSF1", K_NDS_F1},
+	{"DSTAP", K_NDS_TAP},
 
 	{"TAB", K_TAB},
 	{"ENTER", K_ENTER},

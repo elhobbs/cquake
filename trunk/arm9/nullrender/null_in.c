@@ -22,6 +22,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include		"quakedef.h"
 
 cvar_t	keyboard = {"keyboard","0"};			// set for running times
+cvar_t	ds_tap_time = {"ds_tap_time","9000",true};			// set for double tap time
 int key_down = -1;
 
 
@@ -79,6 +80,8 @@ int key_in_shift = 0;
 int key_in_ctrl = 0;
 int key_in_alt = 0;
 int key_in_caps = 0;
+
+int key_tap_time = -1;
 
 /*
 				len = k+1;
@@ -158,16 +161,59 @@ void keyboard_init()
 	}
 }
 
+void ds_do_tap()
+{
+	static int touch_down = 0;
+	int keys;
+
+#ifdef NDS
+		if(ds_tap_time.value)
+		{
+			keys = KEYS_CUR;
+			if(keys & KEY_TOUCH)
+			{
+				int tm = Sys_IntTime();
+				if(touch_down == 0)
+				{
+					//Con_Printf("touch down %d %d %d\n", tm - key_tap_time,tm,key_tap_time);
+					if(tm - key_tap_time < ds_tap_time.value)
+					{
+						Key_Event (K_NDS_TAP, true);
+						Key_Event (K_NDS_TAP, false);
+						//Con_Printf("tap\n");
+					}
+					else
+					{
+						//Con_Printf("missed %d %d\n",tm - key_tap_time,(int)ds_tap_time.value);
+						key_tap_time = tm;
+					}
+					touch_down = 1;
+				}
+			}
+			else
+			{
+				if(touch_down)
+				{
+					//Con_Printf("touch up\n");
+					touch_down = 0;
+				}
+			}
+		}
+#endif
+}
+
 void keyboard_scankeys()
 {
 	static sregion_t *last_reg;
 	static int last_pos;
+	int keys;
 
 	int i,len,x,y,pos;
 	int count = sizeof(key_array)/sizeof(sregion_t);
 
 	if(keyboard.value == 0)
 	{
+		ds_do_tap();
 		last_reg = key_touching = 0;
 		last_pos = key_touching_index = -1;
 		return;
@@ -177,7 +223,7 @@ void keyboard_scankeys()
 
 #ifdef NDS
 touchPosition	touch  = { 0,0,0,0 };
-int keys = KEYS_CUR;
+	keys = KEYS_CUR;
 
 	if (keys & KEY_TOUCH)
 	{
@@ -407,6 +453,8 @@ void draw_keyboard()
 void IN_Commands (void)
 {
 	int key;
+	static int last_index = -1;
+	static sregion_t *last_touching = 0;
 #ifdef NDS
 	u32 key_mask=1;
 	u32 i;
@@ -431,6 +479,8 @@ void IN_Commands (void)
 		{
 			Key_Event(key_down,false);
 			key_down = -1;
+			last_index = -1;
+			last_touching = 0;
 		}
 		return;
 	}
@@ -446,7 +496,8 @@ void IN_Commands (void)
 		key = key_touching->key;
 		break;
 	}
-	if(key_down != -1 && key != key_down)
+	if(key_down != -1 && key != key_down &&
+		last_index != key_touching_index && last_touching != key_touching)
 	{
 		Key_Event(key_down,false);
 	}
@@ -467,6 +518,9 @@ void IN_Commands (void)
 			return;
 		}
 	}
+
+	last_index = key_touching_index;
+	last_touching = key_touching;
 
 }
 
@@ -491,6 +545,7 @@ void IN_Init (void)
 	keyboard_init();
 	Cmd_AddCommand ("force_centerview", Force_CenterView_f);
 	Cvar_RegisterVariable(&keyboard);
+	Cvar_RegisterVariable(&ds_tap_time);
 
 }
 
@@ -590,6 +645,7 @@ IN_Accumulate
 */
 void IN_Accumulate (void)
 {
+	ds_do_tap();
 }
 
 

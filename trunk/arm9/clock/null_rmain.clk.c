@@ -1248,6 +1248,7 @@ void R_TransformFrustum (void)
 
 void R_AnimateLight (void);
 extern cvar_t	r_ambient;
+extern int net_numdrivers;
 
 void R_SetupFrame (void)
 {
@@ -1268,7 +1269,7 @@ void R_SetupFrame (void)
 	while(1);
 #endif
 // don't allow cheats in multiplayer
-	if (cl.maxclients > 1)
+	if (cl.maxclients > 1 && net_numdrivers > 1)
 	{
 		Cvar_Set ("r_ambient", "0");
 	}
@@ -1719,6 +1720,7 @@ void R_RenderView (void)
 	R_SetupFrame();
 	R_MarkLeaves();
 	R_RenderWorld();
+	S_ExtraUpdate ();	// don't let sound get messed up if going slow
 	R_DrawViewModel();
 	R_DrawEntitiesOnList();
 	R_DrawParticles();

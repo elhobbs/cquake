@@ -1251,6 +1251,11 @@ void IPC_Wifi(u32 command, const u32 *data, u32 wordCount)
 }
 #endif
 
+void irqVBlank(void) {	
+//---------------------------------------------------------------------------------
+	scanKeys();
+}
+
 extern const u8 default_font_bin[];
 u16		*ds_display_top; 
 u16		*ds_display_bottom;
@@ -1366,7 +1371,7 @@ void Sys_Init()
 
 
 	irqInit();
-	irqSet(IRQ_VBLANK, 0);
+	irqSet(IRQ_VBLANK, 0);//irqVBlank);
 	IPCFifoInit();
 
 	IPCFifoSetHandler(FIFO_SUBSYSTEM_SOUND, IPCReceiveUser1);

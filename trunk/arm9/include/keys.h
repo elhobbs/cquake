@@ -83,6 +83,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define K_NDS_UP		251
 #define K_NDS_DOWN		252
 #define K_NDS_F1		253
+#define K_NDS_TAP		254
 
 #define K_PAUSE			255
 
