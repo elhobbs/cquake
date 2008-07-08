@@ -1092,7 +1092,7 @@ void M_Options_Draw (void)
 	r = (2.0 - v_gamma.value) / 2.0;
 	M_DrawSlider (160, 64, r);
 
-	M_Print (0, 72, "     Mouse Speed");
+	M_Print (0, 72, "     Touch Speed");
 	r = (sensitivity.value - 1)/10;
 	M_DrawSlider (160, 72, r);
 
