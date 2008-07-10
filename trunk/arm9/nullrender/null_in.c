@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // in_win.c -- windows 95 mouse code
 
 #include		"quakedef.h"
+#include <ctype.h>
 
 cvar_t	keyboard = {"keyboard","0"};			// set for running times
 cvar_t	ds_tap_time = {"ds_tap_time","9000",true};			// set for double tap time
@@ -75,6 +76,8 @@ sregion_t key_array[] = {
 
 sregion_t *key_touching = 0;
 int key_touching_index = -1;
+int key_in_touch = 0;
+int last_in_touch = 0;
 
 int key_in_shift = 0;
 int key_in_ctrl = 0;
@@ -236,13 +239,13 @@ touchPosition	touch  = { 0,0,0,0 };
 			last_pos = key_touching_index = -1;
 			return;
 		}
+		key_in_touch = 1;
 		//Con_Printf("Touch: %d %d\n",x,y);
 	}
 	else
 	{
-		last_reg = key_touching = 0;
-		last_pos = key_touching_index = -1;
-		return;
+		key_in_touch = 0;
+		goto end_quick;
 	}
 #else
 	return;
@@ -277,6 +280,7 @@ touchPosition	touch  = { 0,0,0,0 };
 		key_touching_index = pos;
 		return;
 	}
+end_quick:
 	last_reg = key_touching = 0;
 	last_pos = key_touching_index = -1;
 }
@@ -315,7 +319,7 @@ void draw_keyboard()
 		{
 			x = key_array[i].x;
 			y = vofs + key_array[i].y;
-			ch = (key_in_shift||key_in_caps) ? key_array[i].shift_text : key_array[i].text;
+			ch = key_in_shift ? key_array[i].shift_text : key_array[i].text;
 			pos = 0;
 			while(ch && *ch)
 			{
@@ -335,10 +339,11 @@ void draw_keyboard()
 					*(buf + 13*vid.width) = 7;
 					buf ++;
 				}
+				k = key_in_caps ? toupper(*ch) : *ch;
 				if(key_touching == &key_array[i] && key_touching_index == pos)
-					Draw_Character2(x+3,y+4,*ch<128 ? *ch+128 : *ch,vbuf);
+					Draw_Character2(x+3,y+4,k<128 ? k+128 : k,vbuf);
 				else
-					Draw_Character2(x+3,y+4,*ch,vbuf);
+					Draw_Character2(x+3,y+4,k,vbuf);
 				ch++;
 				x+=16;
 				pos++;
@@ -368,7 +373,9 @@ void draw_keyboard()
 			}
 			while(ch && *ch)
 			{
-				if(key_touching == &key_array[i])
+				if(key_touching == &key_array[i] || 
+					(key_in_caps && key_array[i].key == K_CAPS) ||
+					(key_in_shift && key_array[i].key == K_SHIFT))
 					Draw_Character2(x+3,y+4,*ch<128 ? *ch+128 : *ch,vbuf);
 				else
 					Draw_Character2(x+3,y+4,*ch,vbuf);
@@ -482,6 +489,7 @@ void IN_Commands (void)
 			last_index = -1;
 			last_touching = 0;
 		}
+		last_in_touch = key_in_touch;
 		return;
 	}
 	//Con_Printf("touching: %x %d\n",key_touching,key_touching_index);
@@ -489,7 +497,7 @@ void IN_Commands (void)
 	switch(key_touching->type)
 	{
 	case 0:
-		key = (key_in_shift||key_in_caps) ? key_touching->shift_text[key_touching_index] : key_touching->text[key_touching_index];
+		key = key_in_shift ? key_touching->shift_text[key_touching_index] : (key_in_caps ? toupper(key_touching->text[key_touching_index]) : key_touching->text[key_touching_index]);
 		key_in_shift = 0;
 		break;
 	default:
@@ -497,11 +505,12 @@ void IN_Commands (void)
 		break;
 	}
 	if(key_down != -1 && key != key_down &&
-		last_index != key_touching_index && last_touching != key_touching)
+		last_index != key_touching_index && 
+		last_touching != key_touching)
 	{
 		Key_Event(key_down,false);
 	}
-	if(key != key_down)
+	if(key != key_down && last_in_touch == 0 && key_in_touch != 0)
 	{
 		Key_Event(key,true);
 		key_down = key;
@@ -509,7 +518,7 @@ void IN_Commands (void)
 		//check for shift
 		if(key == K_SHIFT)
 		{
-			key_in_shift = 1;
+			key_in_shift = key_in_shift ? 0 : 1;
 		}
 		//check for caps
 		if(key == K_CAPS)
@@ -519,6 +528,7 @@ void IN_Commands (void)
 		}
 	}
 
+	last_in_touch = key_in_touch;
 	last_index = key_touching_index;
 	last_touching = key_touching;
 

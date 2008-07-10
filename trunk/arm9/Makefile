@@ -5,7 +5,11 @@ ifeq ($(strip $(DEVKITARM)),)
 $(error "Please set DEVKITARM in your environment. export DEVKITARM=<path to>devkitARM")
 endif
 
-include $(DEVKITARM)/ds_rules2
+include $(DEVKITARM)/ds_rules
+
+%.o: %.c
+	@echo $(notdir $<)
+	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) -c $< -o $@
 
 #---------------------------------------------------------------------------------
 # BUILD is the directory where object files & intermediate files will be placed
@@ -36,7 +40,7 @@ CFLAGS1	:=	-g -Wall -O0\
 			$(ARCH)
 
 CFLAGS	+=	$(INCLUDE) -DARM9 -DNDS -DBYTE_DEFINED 
-CFLAGS  +=  -DUSE_WIFI
+#CFLAGS  +=  -DUSE_WIFI
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
 
 ASFLAGS	:=	-g $(ARCH) -march=armv5te -mtune=arm946e-s
