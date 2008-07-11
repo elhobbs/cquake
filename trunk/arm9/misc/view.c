@@ -145,7 +145,7 @@ cvar_t	v_centerspeed = {"v_centerspeed","500"};
 
 void V_StartPitchDrift (void)
 {
-	if (cl.laststop == cl.time)
+	if (cl.laststop == cl.time || !lookspring.value)
 		return;		// something else is keeping it from drifting
 
 	if (cl.nodrift || !cl.pitchvel)

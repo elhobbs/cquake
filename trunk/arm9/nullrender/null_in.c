@@ -621,24 +621,24 @@ void IN_Move (usercmd_t *cmd)
 			else
 				cl.viewangles[YAW] -= m_yaw.value * dx;
 
-			//if (in_mlook.state & 1)
+			//if ((in_mlook.state & 1) || !lookspring.value)
 				V_StopPitchDrift ();
 				
-			if (/* (in_mlook.state & 1) &&*/ !(in_strafe.state & 1))
-			{
+			//if ( (in_mlook.state & 1) && !(in_strafe.state & 1))
+			//{
 				cl.viewangles[PITCH] += m_pitch.value * dy;
 				if (cl.viewangles[PITCH] > 80)
 					cl.viewangles[PITCH] = 80;
 				if (cl.viewangles[PITCH] < -70)
 					cl.viewangles[PITCH] = -70;
-			}
+			/*}
 			else
 			{
 				if ((in_strafe.state & 1) && noclip_anglehack)
 					cmd->upmove -= m_forward.value * dy;
 				else
 					cmd->forwardmove -= m_forward.value * dy;
-			}
+			}*/
 		//}
 
 		// some simple averaging / smoothing through weightened (.5 + .5) accumulation
