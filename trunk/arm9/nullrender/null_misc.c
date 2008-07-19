@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 cvar_t	r_ambient = {"r_ambient", "0"};
+cvar_t	ds_crosshair_color = {"ds_crosshair_color", "0",true};
+cvar_t	ds_draw = {"ds_draw", "1"};
 
 #ifdef NDS
 #include "cyg-profile.h"
@@ -93,11 +95,17 @@ void	R_InitTextures (void)
 					*dest++ = 0xff;
 			}
 	}	
-	r_particle_mip = (texture_t*)Hunk_AllocName (sizeof(texture_t), "notexture");
+	r_particle_mip = (texture_t*)Hunk_AllocName (sizeof(texture_t), "particle");
 	
 	r_particle_mip->width = r_notexture_mip->height = 8;
 	r_particle_mip->ds.width = r_notexture_mip->ds.height = 8;
-	r_particle_mip->ds.name = "notexture";
+	r_particle_mip->ds.name = "particle";
+	
+	r_crosshair_mip = (texture_t*)Hunk_AllocName (sizeof(texture_t), "crosshair");
+	
+	r_crosshair_mip->width = r_notexture_mip->height = 8;
+	r_crosshair_mip->ds.width = r_notexture_mip->ds.height = 8;
+	r_crosshair_mip->ds.name = "crosshair";
 }
 
 /*
@@ -131,6 +139,8 @@ void R_Init (void)
 	Cvar_RegisterVariable (&r_drawentities);
 	Cvar_RegisterVariable (&r_draw);
 	Cvar_RegisterVariable (&r_ambient);
+	Cvar_RegisterVariable (&ds_crosshair_color);
+	Cvar_RegisterVariable (&ds_draw);
 	//Cmd_AddCommand ("pointfile", R_ReadPointFile_f);	
 
 	/*Cvar_RegisterVariable (&r_norefresh);

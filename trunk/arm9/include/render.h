@@ -113,6 +113,7 @@ extern vec3_t	r_origin, r_vpn, r_vright, r_vup;
 
 extern	struct texture_s	*r_notexture_mip;
 extern	struct texture_s	*r_particle_mip;
+extern	struct texture_s	*r_crosshair_mip;
 
 
 void R_Init (void);

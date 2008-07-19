@@ -99,7 +99,7 @@ qsocket_t *NET_NewQSocket (void)
 	net_activeSockets = sock;
 
 	sock->disconnected = false;
-	Con_DPrintf("\nNET_NewQSocket: disconnected = false\n");
+	//Con_DPrintf("\nNET_NewQSocket: disconnected = false\n");
 	sock->connecttime = net_time;
 	Q_strcpy (sock->address,"UNSET ADDRESS");
 	sock->driver = net_driverlevel;
@@ -143,7 +143,7 @@ void NET_FreeQSocket(qsocket_t *sock)
 	sock->next = net_freeSockets;
 	net_freeSockets = sock;
 	sock->disconnected = true;
-	Con_Printf("\nNET_FreeQSocket: disconnected = true\n");
+	//Con_Printf("\nNET_FreeQSocket: disconnected = true\n");
 }
 
 
