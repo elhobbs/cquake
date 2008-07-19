@@ -431,6 +431,9 @@ void R_DrawAliasModel ()
 extern cvar_t	tempv1;
 extern cvar_t	tempv2;
 extern cvar_t	tempv3;
+void 	R_DrawCrosshair();
+extern cvar_t	crosshair;
+
 
 void R_DrawViewModel (void)
 {
@@ -509,6 +512,10 @@ void R_DrawViewModel (void)
 	glRotateY(tempv2.value);
 	glRotateZ(tempv3.value);
 #endif
+	if (crosshair.value)
+	{
+		R_DrawCrosshair();
+	}
 	R_DrawAliasModel ();
 #ifdef NDS
 	glRestoreMatrix(4);

@@ -36,6 +36,7 @@ int		r_currentkey;
 
 texture_t	*r_notexture_mip;
 texture_t	*r_particle_mip;
+texture_t	*r_crosshair_mip;
 
 model_t		*r_currentmodel;
 model_t		*r_worldmodel;
@@ -797,6 +798,7 @@ extern uint32 ds_texture_pal;
 
 }
 
+extern cvar_t	ds_draw;
 
 void R_RenderSurface(msurface_t *fa)
 {
@@ -815,6 +817,8 @@ void R_RenderSurface(msurface_t *fa)
 	int dynamic2[4][4];
 	int			pts[64][6];
 
+	if(ds_draw.value == 0)
+		return;
 
 #ifdef NDS2
 	glEnable(GL_BLEND);
@@ -1249,6 +1253,7 @@ void R_TransformFrustum (void)
 void R_AnimateLight (void);
 extern cvar_t	r_ambient;
 extern int net_numdrivers;
+void TraceLine (vec3_t start, vec3_t end, vec3_t impact);
 
 void R_SetupFrame (void)
 {
@@ -1704,6 +1709,86 @@ void R_DrawEntitiesOnList (void)
 }
 
 void R_DrawParticles (void);
+int ds_load_crosshair_texture(dstex_t *ds);
+void nds_vert3f(float x,float y,float z);
+extern cvar_t	ds_crosshair_color;
+
+void R_DrawCrosshair()
+{
+	int size,color;
+	int tex;
+
+#if 0
+	float scale;
+	vec3_t up,right;
+	vec3_t dest,stop;
+	// find the spot the player is looking at
+	VectorMA (r_refdef.vieworg, 400, r_vpn, dest);
+	TraceLine (r_refdef.vieworg, dest, stop);
+	VectorMA(stop,-4,r_vpn,stop);
+
+	VectorScale (r_vup, 2.0, up);
+	VectorScale (r_vright, 2.0, right);
+		// hack a scale up to keep crosshair from disapearing
+		scale = (stop[0] - r_origin[0])*r_vpn[0] + (stop[1] - r_origin[1])*r_vpn[1]
+			+ (stop[2] - r_origin[2])*r_vpn[2];
+		if (scale < 20)
+			scale = 1;
+		else
+			scale = 1 + scale * 0.004;
+#endif
+
+#if 0
+		stop[0] = 8;
+		stop[1] = 0;
+		stop[2] = 0;
+
+		up[0] = 0.0;
+		up[1] = 0.0;
+		up[2] = 0.5;
+		right[0] = 0.0;
+		right[1] = -0.5;
+		right[2] = 0.0;
+		Con_Printf("u: %d %d %d\n",(int)up[0]*4,(int)up[1]*4,(int)up[2]*4);
+		Con_Printf("r: %d %d %d\n",(int)right[0]*4,(int)right[1]*4,(int)right[2]*4);
+		VectorSubtract(stop,r_refdef.vieworg,stop);
+#endif
+	size = 1;
+	color = ds_crosshair_color.value*16+15;
+
+	tex = ds_load_crosshair_texture(&r_crosshair_mip->ds);
+#ifdef NDS
+	GFX_TEX_FORMAT = tex;
+	glBegin (GL_QUADS);
+		GFX_COLOR = d_8to16table[color&0xff];
+#if 1
+		
+		DS_TEXCOORD2T16(0,0);
+		DS_VERTEX3V16 (32,1,-1);
+		DS_TEXCOORD2T16(0,8<<4);
+		DS_VERTEX3V16 (32, 1, 1);
+		DS_TEXCOORD2T16(8<<4,8<<4);
+		DS_VERTEX3V16 (32, -1, 1);
+		DS_TEXCOORD2T16(8<<4,0);
+		DS_VERTEX3V16 (32, -1, -1);
+		
+#else
+		DS_TEXCOORD2T16(0,0);
+		nds_vert3f (stop[0],stop[1],stop[2]);
+		DS_TEXCOORD2T16(8<<4,0);
+		nds_vert3f (stop[0] + up[0]*scale, stop[1] + up[1]*scale, stop[2] + up[2]*scale);
+		DS_TEXCOORD2T16(0,8<<4);
+		nds_vert3f (stop[0] + right[0]*scale, stop[1] + right[1]*scale, stop[2] + right[2]*scale);
+		
+		DS_TEXCOORD2T16(8<<4,0);
+		nds_vert3f (stop[0] + up[0]*scale, stop[1] + up[1]*scale, stop[2] + up[2]*scale);
+		DS_TEXCOORD2T16(8<<4,8<<4);
+		nds_vert3f (stop[0] + up[0]*scale+ right[0]*scale, stop[1] + up[1]*scale + right[1]*scale, stop[2] + up[2]*scale + right[2]*scale);
+		DS_TEXCOORD2T16(0,8<<4);
+		nds_vert3f (stop[0] + right[0]*scale, stop[1] + right[1]*scale, stop[2] + right[2]*scale);
+#endif
+#endif
+}
 
 void R_RenderView (void)
 {
