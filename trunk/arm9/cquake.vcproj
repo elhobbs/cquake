@@ -264,6 +264,10 @@
 					>
 				</File>
 				<File
+					RelativePath=".\misc\dsrumble.c"
+					>
+				</File>
+				<File
 					RelativePath=".\misc\hash.c"
 					>
 				</File>

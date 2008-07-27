@@ -20,7 +20,18 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // in_win.c -- windows 95 mouse code
 
 #include		"quakedef.h"
+#include		"dsrumble.h"
 #include <ctype.h>
+#ifdef NDS
+#include "IPCFifo.h"
+#endif
+
+
+cvar_t	ds_rpain = {"ds_rpain","5",true};			// for damage rumble
+cvar_t	ds_rmuzzle = {"ds_rmuzzle","6",true};			// for muzzle rumble
+cvar_t	ds_rhealth = {"ds_rhealth","7",true};			// for health rumble
+
+cvar_t	ds_osk = {"ds_osk","0",true}; //0=hidden,1=fullsize,2=mini - numbers only
 
 cvar_t	keyboard = {"keyboard","0"};			// set for running times
 cvar_t	ds_tap_time = {"ds_tap_time","9000",true};			// set for double tap time
@@ -31,6 +42,10 @@ typedef struct {
 	int x,y,type,dx,key;
 	char *text,*shift_text;
 } sregion_t;
+
+char key_buttons[] = "1234567890";
+
+sregion_t key_button_array = {32,0,0,0,0,key_buttons,key_buttons};
 
 char key_row_1[] = "~1234567890-=";
 char key_row_1_shift[] = "`!@#$%^&*()_+";
@@ -162,6 +177,7 @@ void keyboard_init()
 			key_array[i].dx = 16;
 		}
 	}
+	key_button_array.dx = strlen(key_button_array.text)*16;
 }
 
 void ds_do_tap()
@@ -207,19 +223,38 @@ void ds_do_tap()
 
 void keyboard_scankeys()
 {
-	static sregion_t *last_reg;
+	static sregion_t *last_reg,*region;
 	static int last_pos;
-	int keys;
+	int keys,vofs;
 
 	int i,len,x,y,pos;
 	int count = sizeof(key_array)/sizeof(sregion_t);
 
-	if(keyboard.value == 0)
+	ds_do_tap();
+	if(cl.intermission || (keyboard.value == 0 && ds_osk.value == 0))
 	{
-		ds_do_tap();
 		last_reg = key_touching = 0;
 		last_pos = key_touching_index = -1;
 		return;
+	}
+
+	if(scr_con_current || (key_dest == key_game && ds_osk.value))
+	{
+	}
+	else
+	{
+		if(keyboard.value == 0)
+		{
+			last_reg = key_touching = 0;
+			last_pos = key_touching_index = -1;
+			return;
+		}
+	}
+
+	vofs = (vid.height/2);
+	if(ds_osk.value == 2 && !scr_con_current)
+	{
+		vofs = 0;
 	}
 
 	x = y = -1;
@@ -232,7 +267,7 @@ touchPosition	touch  = { 0,0,0,0 };
 	{
 		touch = touchReadXY();
 		x = touch.px;
-		y = touch.py - (vid.height/2);
+		y = touch.py - vofs;
 		if(y < 0)
 		{
 			last_reg = key_touching = 0;
@@ -250,33 +285,39 @@ touchPosition	touch  = { 0,0,0,0 };
 #else
 	return;
 #endif
+	region = &key_array[0];
+	if(ds_osk.value == 2 && !scr_con_current)
+	{
+		region = &key_button_array;
+		count = 1;
+	}
 
 	for(i=0;i<count;i++)
 	{
-		if(y < key_array[i].y || y > (key_array[i].y+16))
+		if(y < region[i].y || y > (region[i].y+16))
 		{
 			//Con_Printf("1: %d %d\n",y,key_array[i].y);
 			continue;
 		}
-		len = key_array[i].dx;
-		if(x < key_array[i].x || x > (key_array[i].x+len))
+		len = region[i].dx;
+		if(x < region[i].x || x > (region[i].x+len))
 		{
 			//Con_Printf("2: %d %d %d\n",x,key_array[i].x,key_array[i].dx);
 			continue;
 		}
-		if(key_array[i].type == 0)
+		if(region[i].type == 0)
 		{
-			pos = (x - key_array[i].x)/16;
+			pos = (x - region[i].x)/16;
 		}
 		else
 		{
 			pos = 0;
 		}
 
-		if(last_reg == &key_array[i] && last_pos == pos)
+		if(last_reg == &region[i] && last_pos == pos)
 			break;
 
-		key_touching = &key_array[i];
+		key_touching = &region[i];
 		key_touching_index = pos;
 		return;
 	}
@@ -295,11 +336,24 @@ void draw_keyboard()
 	int y;
 	int len,vofs;
 	char *buf,*ch,*vbuf;
+	sregion_t *region;
 	int count = sizeof(key_array)/sizeof(sregion_t);
 
-	if(keyboard.value == 0)
+	if(cl.intermission || (keyboard.value == 0 && ds_osk.value == 0))
+	{
 		return;
+	}
 
+	if(scr_con_current || (key_dest == key_game && ds_osk.value))
+	{
+	}
+	else
+	{
+		if(keyboard.value == 0)
+		{
+			return;
+		}
+	}
 	if(vid_on_top)
 	{
 		vbuf = (char *)Hunk_TempAlloc(16*16*5*16);
@@ -309,17 +363,26 @@ void draw_keyboard()
 	{
 		vbuf = (char *)vid.buffer;
 		vofs = vid.height/2;
-		Draw_Fill(0,vid.height/2,16*16,5*16,1);
+		if(scr_con_current || ds_osk.value == 1)
+			Draw_Fill(0,vid.height/2,16*16,5*16,1);
+	}
+
+	region = &key_array[0];
+	if(ds_osk.value == 2 && !scr_con_current)
+	{
+		region = &key_button_array;
+		count= 1;
+		vofs = 0;
 	}
 
 
 	for(i=0;i<count;i++)
 	{
-		if(key_array[i].type == 0)
+		if(region[i].type == 0)
 		{
-			x = key_array[i].x;
-			y = vofs + key_array[i].y;
-			ch = key_in_shift ? key_array[i].shift_text : key_array[i].text;
+			x = region[i].x;
+			y = vofs + region[i].y;
+			ch = key_in_shift ? region[i].shift_text : region[i].text;
 			pos = 0;
 			while(ch && *ch)
 			{
@@ -340,7 +403,7 @@ void draw_keyboard()
 					buf ++;
 				}
 				k = key_in_caps ? toupper(*ch) : *ch;
-				if(key_touching == &key_array[i] && key_touching_index == pos)
+				if(key_touching == &region[i] && key_touching_index == pos)
 					Draw_Character2(x+3,y+4,k<128 ? k+128 : k,vbuf);
 				else
 					Draw_Character2(x+3,y+4,k,vbuf);
@@ -349,11 +412,11 @@ void draw_keyboard()
 				pos++;
 			}
 		}
-		else if(key_array[i].type == 1)
+		else if(region[i].type == 1)
 		{
-			x = key_array[i].x;
-			y = vofs+ key_array[i].y;
-			ch = key_array[i].text;
+			x = region[i].x;
+			y = vofs+ region[i].y;
+			ch = region[i].text;
 			len = strlen(ch)*8 + 4;
 			//left/right sides
 			buf = vbuf + ((y+1)*vid.width) + x;
@@ -373,9 +436,9 @@ void draw_keyboard()
 			}
 			while(ch && *ch)
 			{
-				if(key_touching == &key_array[i] || 
-					(key_in_caps && key_array[i].key == K_CAPS) ||
-					(key_in_shift && key_array[i].key == K_SHIFT))
+				if(key_touching == &region[i] || 
+					(key_in_caps && region[i].key == K_CAPS) ||
+					(key_in_shift && region[i].key == K_SHIFT))
 					Draw_Character2(x+3,y+4,*ch<128 ? *ch+128 : *ch,vbuf);
 				else
 					Draw_Character2(x+3,y+4,*ch,vbuf);
@@ -383,10 +446,10 @@ void draw_keyboard()
 				x+=8;
 			}
 		}
-		else if(key_array[i].type == 2)
+		else if(region[i].type == 2)
 		{
-			x = key_array[i].x;
-			y = vofs + key_array[i].y;
+			x = region[i].x;
+			y = vofs + region[i].y;
 			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
@@ -398,10 +461,10 @@ void draw_keyboard()
 				buf += vid.width;
 			}
 		}
-		else if(key_array[i].type == 3)
+		else if(region[i].type == 3)
 		{
-			x = key_array[i].x;
-			y = vofs + key_array[i].y;
+			x = region[i].x;
+			y = vofs + region[i].y;
 			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
@@ -413,10 +476,10 @@ void draw_keyboard()
 				buf += vid.width;
 			}
 		}
-		else if(key_array[i].type == 4)
+		else if(region[i].type == 4)
 		{
-			x = key_array[i].x;
-			y = vofs + key_array[i].y;
+			x = region[i].x;
+			y = vofs + region[i].y;
 			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
@@ -428,10 +491,10 @@ void draw_keyboard()
 				buf += vid.width;
 			}
 		}
-		else if(key_array[i].type == 5)
+		else if(region[i].type == 5)
 		{
-			x = key_array[i].x;
-			y = vofs + key_array[i].y;
+			x = region[i].x;
+			y = vofs + region[i].y;
 			buf = vbuf + ((y+1)*vid.width) + x;
 			for(k=0;k<12;k++)
 			{
@@ -444,28 +507,52 @@ void draw_keyboard()
 			}
 		}
 	}
-	//just dump now
-	if(vid_on_top)
-	{
+
 #ifdef NDS
+extern u16 *ds_display_bottom;
+	if(!scr_con_current && ds_osk.value == 2)
+	{
 		char * dest;
 
-		dest = (char *)BG_BMP_RAM_SUB(0);
+		dest = (char *)ds_display_bottom;
+		dmaCopyWords(2, (uint32*)vbuf,(uint32*)dest, vid.width*16);
+	}
+	else if(vid_on_top || ds_osk.value == 1)
+	{
+		char * dest;
+
+		dest = (char *)ds_display_bottom;
 		dest += (vid.height/2)*vid.width;
 		dmaCopyWords(2, (uint32*)vbuf,(uint32*)dest, vid.width*5*16);
-#endif
 	}
+#endif
 }
+
+volatile int in_sleep_mode = 0;
 
 void IN_Commands (void)
 {
 	int key;
 	static int last_index = -1;
 	static sregion_t *last_touching = 0;
+
 #ifdef NDS
 	u32 key_mask=1;
 	u32 i;
 	u32 keys = KEYS_CUR;
+
+	if(keys & KEY_LID)
+	{
+		in_sleep_mode = 1;
+		IPCFifoSendWordAsync(FIFO_SUBSYSTEM_POWER,0,(u32)0x2004);
+		
+		while(in_sleep_mode)
+		{
+			//Con_Printf(".");
+			swiWaitForVBlank();
+		}
+	}
+
 	for(i=0;i<12;i++,key_mask<<=1) {
 		if( (keys & key_mask) && !(keys_last & key_mask)) {
 			//iprintf("pressed start\n");
@@ -556,7 +643,12 @@ void IN_Init (void)
 	Cmd_AddCommand ("force_centerview", Force_CenterView_f);
 	Cvar_RegisterVariable(&keyboard);
 	Cvar_RegisterVariable(&ds_tap_time);
-
+	Cvar_RegisterVariable(&ds_rhealth);
+	Cvar_RegisterVariable(&ds_rmuzzle);
+	Cvar_RegisterVariable(&ds_rpain);
+	Cvar_RegisterVariable(&ds_osk);
+	Cmd_AddCommand ("rumbleon", ds_rumble_on);
+	Cmd_AddCommand ("rumbleoff", ds_rumble_off);
 }
 
 /*

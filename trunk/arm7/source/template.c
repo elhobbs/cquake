@@ -100,7 +100,61 @@ void VcountHandler() {
 	IPC->touchZ1		= z1;
 	IPC->touchZ2		= z2;
 	IPC->buttons		= but;
+#if 0
+	// Check if the lid has been closed. 
+	if(but & BIT(7)) { 
+	   // Save the current interrupt sate. 
+	   u32 ie_save = REG_IE; 
+	   // Turn the speaker down. 
+	   swiChangeSoundBias(0,0x400); 
+	   // Save current power state. 
+	   int power = readPowerManagement(PM_CONTROL_REG); 
+	   // Set sleep LED. 
+	   writePowerManagement(PM_CONTROL_REG, PM_LED_CONTROL(1)); 
+	   // Register for the lid interrupt. 
+	   REG_IE = IRQ_LID; 
+		
+	   // Power down till we get our interrupt. 
+	   swiSleep(); //waits for PM (lid open) interrupt 
+		
+	   REG_IF = ~0; 
+	   // Restore the interrupt state. 
+	   REG_IE = ie_save; 
+	   // Restore power state. 
+	   writePowerManagement(PM_CONTROL_REG, power); 
+		
+	   // Turn the speaker up. 
+	   swiChangeSoundBias(1,0x400); 
+	}
+#endif
+}
 
+void doSleep()
+{
+	   // Save the current interrupt sate. 
+	   u32 ie_save = REG_IE; 
+	   // Turn the speaker down. 
+	   swiChangeSoundBias(0,0x400); 
+	   // Save current power state. 
+	   int power = readPowerManagement(PM_CONTROL_REG); 
+	   // Set sleep LED. 
+	   writePowerManagement(PM_CONTROL_REG, PM_LED_CONTROL(1)); 
+	   // Register for the lid interrupt. 
+	   REG_IE = IRQ_LID; 
+		
+	   // Power down till we get our interrupt. 
+	   swiSleep(); //waits for PM (lid open) interrupt 
+		
+	   REG_IF = ~0; 
+	   // Restore the interrupt state. 
+	   REG_IE = ie_save; 
+	   // Restore power state. 
+	   writePowerManagement(PM_CONTROL_REG, power); 
+		
+	   // Turn the speaker up. 
+	   swiChangeSoundBias(1,0x400); 
+	
+	IPCFifoSendWordAsync(FIFO_SUBSYSTEM_POWER,1,(u32)0x2004);
 }
 
 //---------------------------------------------------------------------------------
@@ -279,6 +333,16 @@ int ds_set_position(int *pos)
 	return 0;
 }
 
+void IPC_Power(u32 command, const u32 *data, u32 wordCount)
+{
+	switch(command)
+	{
+	case 0:
+		doSleep();
+		break;
+	}
+}
+
 void IPCReceiveUser1(u32 command, const u32 *data, u32 wordCount)
 {
 	
@@ -356,6 +420,7 @@ int main(int argc, char ** argv) {
 	IPCFifoInit();
 
 	IPCFifoSetHandler(FIFO_SUBSYSTEM_SOUND, IPCReceiveUser1);
+	IPCFifoSetHandler(FIFO_SUBSYSTEM_POWER, IPC_Power);
 	
 #ifdef USE_WIFI
 	IPCFifoSetHandler(FIFO_SUBSYSTEM_WIFI, IPC_Wifi);

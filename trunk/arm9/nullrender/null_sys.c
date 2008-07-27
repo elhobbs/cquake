@@ -20,6 +20,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 // sys_null.h -- null system driver to aid porting efforts
 #include "quakedef.h"
 #include "errno.h"
+#include "dsrumble.h"
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
@@ -1137,6 +1138,18 @@ void quake_main (int argc, char **argv)
 	printf ("\n\nmem: %p %d\n",parms.membase,parms.memsize);
 
 	//COM_InitArgv (argc, argv);
+	if (COM_CheckParm ("-rumble"))
+	{
+		int t = COM_CheckParm("-rumble") + 1;
+
+		if (t < com_argc)
+		{
+			if(strcmp("3in1",com_argv[t]) == 0)
+			{
+				ds_rumble_3in1_init();
+			}
+		}
+	}
 
 	parms.argc = com_argc;
 	parms.argv = com_argv;
@@ -1159,7 +1172,7 @@ void quake_main (int argc, char **argv)
 		//Con_Printf ("%f fps\n", 1.0/time);
 		//Con_Printf("%f %f %f\n",newtime,oldtime,time);
 		
-		//Con_Printf("%");
+		//Con_Printf("%d %d\n",ds_rumble_count,rumble_freq);
 		frame++;
 	}
 }
@@ -1210,6 +1223,18 @@ static void MYdefaultHandler() {
 
 }
 #endif
+extern volatile int in_sleep_mode;
+
+void IPC_Power(u32 command, const u32 *data, u32 wordCount)
+{
+	switch(command)
+	{
+	case 1:
+		in_sleep_mode = 0;
+		break;
+	}
+}
+
 void IPCReceiveUser1(u32 command, const u32 *data, u32 wordCount)
 {
 	int i;
@@ -1255,6 +1280,8 @@ void irqVBlank(void) {
 //---------------------------------------------------------------------------------
 	scanKeys();
 }
+
+
 
 extern const u8 default_font_bin[];
 u16		*ds_display_top; 
@@ -1375,6 +1402,7 @@ void Sys_Init()
 	IPCFifoInit();
 
 	IPCFifoSetHandler(FIFO_SUBSYSTEM_SOUND, IPCReceiveUser1);
+	IPCFifoSetHandler(FIFO_SUBSYSTEM_POWER, IPC_Power);
 
 #ifdef USE_WIFI
 	IPCFifoSetHandler(FIFO_SUBSYSTEM_WIFI, IPC_Wifi);

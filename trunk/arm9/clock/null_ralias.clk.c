@@ -49,6 +49,13 @@ void R_SetAliasSkin(aliashdr_t *paliashdr) {
 	//register char * stack_ptr asm ("sp"); 
 	
 	//iprintf("sp: %x\n",stack_ptr);
+
+	if(r_currententity->skinnum > r_mdl->numskins)
+	{
+		//Sys_Error("error");
+		r_currententity->skinnum = 0;
+
+	}
 	
 	pskindesc = ((maliasskindesc_t *)BYTE_OFFSET(paliashdr,paliashdr->skindesc)) + r_currententity->skinnum;
 	if (pskindesc->type == ALIAS_SKIN_GROUP)

@@ -23,6 +23,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_local.h"
 #include "hash.h"
 #include "ds_textures.h"
+#include "dsrumble.h"
 
 /*
 
@@ -643,6 +644,9 @@ void _Host_Frame (float time)
 
 // allow mice or other external controllers to add commands
 	IN_Commands ();
+
+//update rumble
+	ds_rumble_state();
 
 // process console commands
 	Cbuf_Execute ();
