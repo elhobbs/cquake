@@ -92,6 +92,7 @@ void CL_ClearState (void)
 	for (i=0 ; i<MAX_EFRAGS-1 ; i++)
 		cl.free_efrags[i].entnext = &cl.free_efrags[i+1];
 	cl.free_efrags[i].entnext = NULL;
+
 }
 
 /*

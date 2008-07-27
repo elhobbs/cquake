@@ -21,6 +21,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 #include "r_local.h"
+#include "dsrumble.h"
 
 /*
 
@@ -813,6 +814,7 @@ void V_CalcViewRoll (void)
 		r_refdef.viewangles[ROLL] += v_dmg_time/v_kicktime.value*v_dmg_roll;
 		r_refdef.viewangles[PITCH] += v_dmg_time/v_kicktime.value*v_dmg_pitch;
 		v_dmg_time -= host_frametime;
+		ds_rumble(rum_pain,ds_rpain.value,0.01);
 	}
 
 	if (cl.stats[STAT_HEALTH] <= 0)

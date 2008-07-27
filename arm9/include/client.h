@@ -154,6 +154,8 @@ typedef struct
 	float	item_gettime[32];	// cl.time of aquiring item, for blinking
 	float		faceanimtime;	// use anim frame if cl.time < this
 
+	float		rumble_time;
+
 	cshift_t	cshifts[NUM_CSHIFTS];	// color shifts for damage, powerups
 	cshift_t	prev_cshifts[NUM_CSHIFTS];	// and content types
 
@@ -255,6 +257,10 @@ extern	cvar_t	m_pitch;
 extern	cvar_t	m_yaw;
 extern	cvar_t	m_forward;
 extern	cvar_t	m_side;
+
+extern cvar_t	ds_rpain;			// for damage rumble
+extern cvar_t	ds_rmuzzle;			// for muzzle rumble
+extern cvar_t	ds_rhealth;			// for health rumble
 
 
 #define	MAX_TEMP_ENTITIES	64			// lightning bolts, etc

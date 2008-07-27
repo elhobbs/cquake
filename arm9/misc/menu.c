@@ -941,7 +941,7 @@ void M_Net_Key (int k)
 #ifdef _WIN32
 #define	OPTIONS_ITEMS	14
 #else
-#define	OPTIONS_ITEMS	15
+#define	OPTIONS_ITEMS	16
 #endif
 
 #define	SLIDER_RANGE	10
@@ -958,6 +958,7 @@ void M_Menu_Options_f (void)
 
 extern int vid_on_top;
 extern cvar_t ds_hud_alpha;
+extern cvar_t	ds_osk; //0=hidden,1=fullsize,2=mini - numbers only
 
 void M_AdjustSliders (int dir)
 {
@@ -1033,6 +1034,13 @@ void M_AdjustSliders (int dir)
 
 	case 11:	// lookstrafe
 		Cvar_SetValue ("lookstrafe", !lookstrafe.value);
+		break;
+
+	case 14:
+		ds_osk.value += 1;
+		if(ds_osk.value > 2)
+			ds_osk.value = 0;
+		Cvar_SetValue ("ds_osk", ds_osk.value);
 		break;
 
 	case 13:	// HUD Alpha
@@ -1125,7 +1133,21 @@ void M_Options_Draw (void)
 	r = (ds_hud_alpha.value)/31;
 	M_DrawSlider (160, 136, r);
 
-	M_Print (0, 144, "   Save Settings");
+	M_Print (0, 144, "OnscreenKeyboard");
+	switch((int)ds_osk.value)
+	{
+	case 0:
+		M_Print (160, 144, "Off ");
+		break;
+	case 1:
+		M_Print (160, 144, "Full");
+		break;
+	case 2:
+		M_Print (160, 144, "Mini");
+		break;
+	}
+
+	M_Print (0, 152, "   Save Settings");
 	// cursor
 	M_DrawCharacter (136, 32 + options_cursor*8, 12+((int)(realtime*4)&1));
 }
@@ -1161,7 +1183,7 @@ void M_Options_Key (int k)
 			//M_Menu_Video_f ();
 			VID_swap_f();
 			break;
-		case 14:
+		case 15:
 			Host_WriteConfiguration ();
 			break;
 		default:

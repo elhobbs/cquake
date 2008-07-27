@@ -1059,17 +1059,10 @@ BLEND_AB = ((int)ds_hud_alpha.value)|(31<<8);
 		src8 = vid.buffer + ((vid.conheight - sb_lines)*vid.conwidth);
 		dmaCopyWords(2, (uint32*)src8,(uint32*)dest16, vid.conwidth*sb_lines);
 	}
-#if 0
-	for(y=8;y<64;y++)
-	{
-		dest16 = ((u16*)BG_BMP_RAM_SUB(2)) + y*64 + 4;
-		src8 = vid.buffer + y*128 + 8;
-		dmaCopyWords(2, (uint32*)src8,(uint32*)dest16, 24);
-	}
-#endif
 #endif
 		return;
 	}
+
 #ifdef NDS
 extern u16 *ds_display_menu;
 	dest16 = ds_display_menu;
