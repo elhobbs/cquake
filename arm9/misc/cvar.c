@@ -81,7 +81,9 @@ char *Cvar_CompleteVariable (char *partial)
 {
 	cvar_t		*cvar;
 	int			len;
+	char *firstmatch=0;
 	
+	Con_Printf("cvars:\n");
 	len = Q_strlen(partial);
 	
 	if (!len)
@@ -89,10 +91,19 @@ char *Cvar_CompleteVariable (char *partial)
 		
 // check functions
 	for (cvar=cvar_vars ; cvar ; cvar=cvar->next)
+	{
 		if (!Q_strncmp (partial,cvar->name, len))
-			return cvar->name;
+		{
+			if(firstmatch == 0)
+			{
+				firstmatch = cvar->name;
+			}
+			Con_Printf("   %s\n",cvar->name);
+			//return cvar->name;
+		}
+	}
 
-	return NULL;
+	return firstmatch;
 }
 
 

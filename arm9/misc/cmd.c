@@ -589,7 +589,9 @@ char *Cmd_CompleteCommand (char *partial)
 {
 	cmd_function_t	*cmd;
 	int				len;
+	char *firstmatch = 0;
 	
+	Con_Printf("Commands:\n");
 	len = Q_strlen(partial);
 	
 	if (!len)
@@ -597,10 +599,19 @@ char *Cmd_CompleteCommand (char *partial)
 		
 // check functions
 	for (cmd=cmd_functions ; cmd ; cmd=cmd->next)
+	{
 		if (!Q_strncmp (partial,cmd->name, len))
-			return cmd->name;
+		{
+			if(firstmatch == 0)
+			{
+				firstmatch = cmd->name;
+			}
+			Con_Printf("   %s\n",cmd->name);
+			//return cmd->name;
+		}
+	}
 
-	return NULL;
+	return firstmatch;
 }
 
 /*

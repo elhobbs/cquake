@@ -135,7 +135,7 @@ Interactive line editing and console scrollback
 */
 void Key_Console (int key)
 {
-	char	*cmd;
+	char	*cmd,*cmd1;
 	
 	if (key == K_ENTER)
 	{
@@ -154,9 +154,13 @@ void Key_Console (int key)
 
 	if (key == K_TAB)
 	{	// command completion
+		Con_Printf("\nMatches for: %s*\n",key_lines[edit_line]+1);
 		cmd = Cmd_CompleteCommand (key_lines[edit_line]+1);
-		if (!cmd)
-			cmd = Cvar_CompleteVariable (key_lines[edit_line]+1);
+		cmd1 = Cvar_CompleteVariable (key_lines[edit_line]+1);
+		//if (!cmd)
+		//	cmd = Cvar_CompleteVariable (key_lines[edit_line]+1);
+		if(cmd == 0)
+			cmd = cmd1;
 		if (cmd)
 		{
 			Q_strcpy (key_lines[edit_line]+1, cmd);

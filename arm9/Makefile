@@ -7,6 +7,12 @@ endif
 
 include $(DEVKITARM)/ds_rules
 
+#---------------------------------------------------------------------------------
+#%.clk.o: %.clk.c
+#	@echo $(notdir $<)
+#	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) -finstrument-functions -mpoke-function-name -marm -c $< -o $@
+
+#---------------------------------------------------------------------------------
 %.o: %.c
 	@echo $(notdir $<)
 	$(CXX) -MMD -MP -MF $(DEPSDIR)/$*.d $(CXXFLAGS) -c $< -o $@
@@ -19,8 +25,8 @@ include $(DEVKITARM)/ds_rules
 # all directories are relative to this makefile
 #---------------------------------------------------------------------------------
 BUILD		:=	build
-#SOURCES		:=	profiler clock nullrender client console host misc network progs render server sound ../common
-SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
+SOURCES		:=	profiler clock nullrender client console host misc network progs render server sound ../common
+#SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
 INCLUDES	:=	include ../common
 DATA		:=
 
