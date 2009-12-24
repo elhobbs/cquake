@@ -23,6 +23,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 cvar_t	r_ambient = {"r_ambient", "0"};
 cvar_t	ds_crosshair_color = {"ds_crosshair_color", "0",true};
 cvar_t	ds_draw = {"ds_draw", "1"};
+cvar_t	ds_drawsky = {"ds_drawsky", "1"};
+cvar_t	ds_drawturb = {"ds_drawturb", "1"};
 
 #ifdef NDS
 #include "cyg-profile.h"
@@ -141,6 +143,8 @@ void R_Init (void)
 	Cvar_RegisterVariable (&r_ambient);
 	Cvar_RegisterVariable (&ds_crosshair_color);
 	Cvar_RegisterVariable (&ds_draw);
+	Cvar_RegisterVariable (&ds_drawsky);
+	Cvar_RegisterVariable (&ds_drawturb);
 	//Cmd_AddCommand ("pointfile", R_ReadPointFile_f);	
 
 	/*Cvar_RegisterVariable (&r_norefresh);

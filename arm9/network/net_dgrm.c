@@ -74,12 +74,14 @@ int droppedDatagrams;
 
 static int myDriverLevel;
 
-struct
+typedef struct
 {
 	unsigned int	length;
 	unsigned int	sequence;
 	byte			data[MAX_DATAGRAM];
-} packetBuffer;
+} packetBuffer_t;
+
+packetBuffer_t packetBuffer;
 
 extern int m_return_state;
 extern int m_state;
@@ -1102,7 +1104,8 @@ qsocket_t *Datagram_CheckNewConnections (void)
 	return ret;
 }
 
-
+//void Draw_StringCenter (int x, int y, char *str);
+//char sh_buf[200];
 static void _Datagram_SearchForHosts (qboolean xmit)
 {
 	int		ret;
@@ -1126,8 +1129,15 @@ static void _Datagram_SearchForHosts (qboolean xmit)
 		SZ_Clear(&net_message);
 	}
 
-	while ((ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr)) > 0)
+	while (1)
 	{
+		//sprintf(sh_buf,"dfunc: %x %x\n",(int *)&dfunc,(int *)dfunc.Read);
+		//Draw_StringCenter(0,132,sh_buf);
+		//sprintf(sh_buf,"nm: %x max: %d cur:%d\n",(int)net_message.data,net_message.maxsize,net_message.cursize);
+		//Draw_StringCenter(0,164,sh_buf);
+		ret = dfunc.Read (dfunc.controlSock, net_message.data, net_message.maxsize, &readaddr);
+		if(ret <= 0)
+			break;
 		if (ret < sizeof(int))
 			continue;
 		net_message.cursize = ret;

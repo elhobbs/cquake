@@ -1,13 +1,37 @@
 #include "quakedef.h"
 #include "hash.h"
 #ifdef NDS
-#include "IPCFifo.h"
+//#include "IPCFifo.h"
 #endif
+/*
+typedef struct
+{
+    byte  *data;
+    int size;
+    int  format;
+    int  rate;
+    int  volume;
+    int  pan;
+    int  loop;
+	int  fixed_volume;
+	int  fixed_attenuation;
+	int  origin[3];
+} fifo_sound_t;
 
+*/
 int ds_startSound9(fifo_sound_t *fsnd)
 {
+	//return 0;
 #ifdef NDS
-	IPCFifoSendMultiAsync(FIFO_SUBSYSTEM_SOUND,1,(const u32 *)fsnd,sizeof(*fsnd)/sizeof(int));
+	soundPlaySample(fsnd->data,
+		fsnd->format==1?SoundFormat_8Bit:SoundFormat_16Bit,
+		fsnd->size,
+		fsnd->rate,
+		fsnd->volume,
+		fsnd->pan,
+		fsnd->loop,
+		0);
+	//IPCFifoSendMultiAsync(FIFO_SUBSYSTEM_SOUND,1,(const u32 *)fsnd,sizeof(*fsnd)/sizeof(int));
 #endif
 	return 0;
 }
@@ -25,7 +49,7 @@ int ds_update_position(vec3_t origin,vec3_t vright)
 	data[5] = (int)(vright[2]*(1<<16));
 
 #ifdef NDS
-	IPCFifoSendMultiAsync(FIFO_SUBSYSTEM_SOUND,2,(const u32 *)&data,sizeof(data)/sizeof(int));
+	//IPCFifoSendMultiAsync(FIFO_SUBSYSTEM_SOUND,2,(const u32 *)&data,sizeof(data)/sizeof(int));
 #endif
 	return 0;
 }

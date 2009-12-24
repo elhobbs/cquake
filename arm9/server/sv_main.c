@@ -141,7 +141,7 @@ void SV_StartSound (edict_t *entity, int channel, char *sample, int volume,
     
     if ( sound_num == MAX_SOUNDS || !sv.sound_precache[sound_num] )
     {
-        Con_Printf ("SV_StartSound: %s not precacheed\n", sample);
+        //Con_Printf ("SV_StartSound: %s not precacheed\n", sample);
         return;
     }
     
@@ -1019,10 +1019,12 @@ This is called at the start of each level
 extern float		scr_centertime_off;
 void ds_precache_bsp_textures(model_t *mod);
 
+int ds_in_loading_worldmodel = 0;
 void SV_SpawnServer (char *server)
 {
 	edict_t		*ent;
 	int			i;
+	model_t *mod;
 	bmodel_t *model;
 
 	//show_overlay(true,false);
@@ -1107,7 +1109,9 @@ void SV_SpawnServer (char *server)
 	strcpy (sv.name, server);
 	sprintf (sv.modelname,"maps/%s.bsp", server);
 
+	ds_in_loading_worldmodel = true;
 	sv.worldmodel = Mod_ForName (sv.modelname, false);
+	ds_in_loading_worldmodel = false;
 
 	if (!sv.worldmodel)
 	{
@@ -1117,7 +1121,7 @@ void SV_SpawnServer (char *server)
 	}
 	sv.models[1] = sv.worldmodel;
 
-	ds_precache_bsp_textures(sv.worldmodel);
+	//ds_precache_bsp_textures(sv.worldmodel);
 	
 //
 // clear world interaction links
@@ -1158,7 +1162,14 @@ void SV_SpawnServer (char *server)
 	
 	model = (bmodel_t *)sv.worldmodel->cache.data;
 	ED_LoadFromFile (model->entities);
+#ifdef WIN32
+	if(model->entities) free(model->entities);
+	model->entities = 0;
+#endif
 
+#ifdef NDS
+		vramSetBankD(VRAM_D_TEXTURE);
+#endif
 	sv.active = true;
 
 // all setup is completed, any further precache statements are errors
@@ -1177,7 +1188,15 @@ void SV_SpawnServer (char *server)
 		if (host_client->active)
 			SV_SendServerinfo (host_client);
 	
+	for (i=0 ; i<MAX_MODELS ; i++)
+	{
+		mod = sv.models[i];
+		if(mod && mod->type == mod_brush && mod->name && mod->name[0] != '*') {
+			ds_precache_bsp_textures(mod);
+		}
+	}
 	Con_Printf ("Server spawned.\n");
 	//show_overlay(false,false);
+	V_UpdatePalette ();
 }
 

@@ -395,6 +395,7 @@ model_t *Mod_ForName (char *name, qboolean crash)
 byte	*mod_base;
 int ds_adjust_size(int x);
 int ds_adjust_size2(int x);
+int ds_adjust_size3(int x);
 
 
 /*
@@ -644,14 +645,26 @@ Mod_LoadEntities
 void Mod_LoadEntities (lump_t *l)
 {
 	byte *buf;
+	extern int ds_in_loading_worldmodel;
 	if (!l->filelen)
 	{
 		bloadmodel->entities = NULL;
 		return;
 	}
-	buf = (byte *)COM_LoadTempFilePart(loadmodel_handle,l->fileofs,l->filelen);
-	bloadmodel->entities = (char*)Hunk_AllocName ( l->filelen, loadname);	
-	memcpy (bloadmodel->entities, buf, l->filelen);
+	if(ds_in_loading_worldmodel) {
+		buf = (byte *)COM_LoadTempFilePart(loadmodel_handle,l->fileofs,l->filelen);
+#ifdef NDS
+		bloadmodel->entities = (char*)VRAM_D;
+		vramSetBankD(VRAM_D_LCD);
+		DC_FlushAll();
+		dmaCopyWords(2,(uint32*)buf, (uint32*)bloadmodel->entities , l->filelen+3);
+#else
+		bloadmodel->entities = (char*)malloc(l->filelen);//Hunk_AllocName ( l->filelen, loadname);
+		memcpy (bloadmodel->entities, buf, l->filelen);
+#endif
+	} else {
+		bloadmodel->entities = 0;
+	}
 }
 
 
@@ -1763,22 +1776,56 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	alias_skinwidth = pmodel->skinwidth = LittleLong (pinmodel->skinwidth);
 	alias_skinheight = pmodel->skinheight = LittleLong (pinmodel->skinheight);
 	
+#define BIG_TEXTURES 1
+
 	if(alias_skinwidth >= alias_skinheight)
 	{
-		alias_skinwidth2 = ds_adjust_size2(alias_skinwidth);
-		alias_skinheight2 = ds_adjust_size2((alias_skinwidth2 * (alias_skinheight<<16)/alias_skinwidth)>>16);
-		if(alias_skinheight2 == 128)
+#ifndef NDS
+#define strncmpi strnicmp
+#endif
+
+#ifdef BIG_TEXTURES
+		if(alias_skinwidth >= 256 || strncmpi(mod->name,"progs/v_",8) == 0)
 		{
-			alias_skinheight2 = 64;
+			alias_skinwidth2 = ds_adjust_size3(alias_skinwidth);
+			alias_skinheight2 = ds_adjust_size3((alias_skinwidth2 * (alias_skinheight<<4)/alias_skinwidth)>>4);
+			if(alias_skinheight2 == 256)
+			{
+				alias_skinheight2 = 128;
+			}
+		}
+		else
+#endif
+		{
+			alias_skinwidth2 = ds_adjust_size2(alias_skinwidth);
+			alias_skinheight2 = ds_adjust_size2((alias_skinwidth2 * (alias_skinheight<<4)/alias_skinwidth)>>4);
+			if(alias_skinheight2 == 128)
+			{
+				alias_skinheight2 = 64;
+			}
 		}
 	}
 	else
 	{
-		alias_skinheight2 = ds_adjust_size2(alias_skinheight);
-		alias_skinwidth2 = ds_adjust_size2((alias_skinheight2 * (alias_skinwidth<<16)/alias_skinheight)>>16);
-		if(alias_skinwidth2 == 128)
+#ifdef BIG_TEXTURES
+		if(alias_skinheight >= 256 || strncmpi(mod->name,"progs/v_",8) == 0)
 		{
-			alias_skinwidth2 = 64;
+			alias_skinheight2 = ds_adjust_size3(alias_skinheight);
+			alias_skinwidth2 = ds_adjust_size3((alias_skinheight2 * (alias_skinwidth<<4)/alias_skinheight)>>4);
+			if(alias_skinwidth2 == 256)
+			{
+				alias_skinwidth2 = 128;
+			}
+		}
+		else 
+#endif
+		{
+			alias_skinheight2 = ds_adjust_size2(alias_skinheight);
+			alias_skinwidth2 = ds_adjust_size2((alias_skinheight2 * (alias_skinwidth<<4)/alias_skinheight)>>4);
+			if(alias_skinwidth2 == 128)
+			{
+				alias_skinwidth2 = 64;
+			}
 		}
 	}
 
@@ -1876,14 +1923,14 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 		//	s += pheader->skinwidth / 2;	// on back side
 		//s = (s + 0.5) / pmodel->skinwidth;
 		//t = (t + 0.5) / pmodel->skinheight;
-		s = (s) / pmodel->skinwidth;
-		t = (t) / pmodel->skinheight;
+		s = (s + 0.5) / (float)pmodel->skinwidth;
+		t = (t + 0.5) / (float)pmodel->skinheight;
 		
 		//if(pstverts[i].onseam)
 		//	s += 0.5f;
 		
-		s *= alias_skinwidth2;
-		t *= alias_skinheight2;
+		s *= (float)alias_skinwidth2;
+		t *= (float)alias_skinheight2;
 		
 #define fdst16(n)		  ((int)((n) * (1 << 4)))
 		pstverts[i].s = fdst16(s);

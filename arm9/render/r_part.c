@@ -22,6 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_local.h"
 #include "ds_textures.h"
 
+#ifdef WIN32
+typedef short int v10;       /*!< \brief normal .10 fixed point, NOT USED FOR 10bit VERTEXES!!!*/
+#define floattov10(n)        ((n>.998) ? 0x1FF : ((v10)((n)*(1<<9)))) /*!< \brief convert float to v10 */
+#define NORMAL_PACK(x,y,z)   (((x) & 0x3FF) | (((y) & 0x3FF) << 10) | ((z) << 20)) /*!< \brief Pack 3 v10 normals into a 32bit value */
+#endif
+
 #define MAX_PARTICLES			2048	// default max # of particles at one
 										//  time
 #define ABSOLUTE_MIN_PARTICLES	512		// no fewer than this no matter what's
@@ -51,6 +57,16 @@ void R_InitParticleTexture()
 					  GL_TEXTURE_WRAP_S|GL_TEXTURE_WRAP_T|GL_TEXTURE_COLOR0_TRANSPARENT, (byte *)dottexture);
 #endif
 }
+
+#define NUMVERTEXNORMALS	162
+
+float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
+#include "anorms.h"
+};
+int	ds_normals[NUMVERTEXNORMALS];
+
+
+vec3_t	avelocities[NUMVERTEXNORMALS];
 /*
 ===============
 R_InitParticles
@@ -77,6 +93,17 @@ void R_InitParticles (void)
 			Hunk_AllocName (r_numparticles * sizeof(particle_t), "particles");
 
 	R_InitParticleTexture();
+	
+	for(i=0;i<NUMVERTEXNORMALS;i++) {
+		//ds_normals[i][0] = r_avertexnormals[i][0]*(1<<14);
+		//ds_normals[i][1] = r_avertexnormals[i][1]*(1<<14);
+		//ds_normals[i][2] = r_avertexnormals[i][2]*(1<<14);
+		ds_normals[i] = NORMAL_PACK(
+							floattov10(r_avertexnormals[i][0]),
+							floattov10(r_avertexnormals[i][1]),
+							floattov10(r_avertexnormals[i][2])
+							);
+	}
 }
 
 /*
@@ -85,13 +112,6 @@ R_EntityParticles
 ===============
 */
 
-#define NUMVERTEXNORMALS	162
-
-float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
-#include "anorms.h"
-};
-
-vec3_t	avelocities[NUMVERTEXNORMALS];
 
 void R_EntityParticles (entity_t *ent)
 {
@@ -691,21 +711,24 @@ void R_DrawParticles (void)
 		// hack a scale up to keep particles from disapearing
 		scale = (p->org[0] - r_origin[0])*r_vpn[0] + (p->org[1] - r_origin[1])*r_vpn[1]
 			+ (p->org[2] - r_origin[2])*r_vpn[2];
-		if (scale < 20)
-			scale = 1;
-		else
-			scale = 1 + scale * 0.004;
-		//glColor3ubv ((byte *)&d_8to24table[(int)p->color]);
-		GFX_COLOR = d_8to16table[(int)p->color];
-		//glTexCoord2f (0,0);
-		DS_TEXCOORD2T16(0,0);
-		nds_vert3f (p->org[0],p->org[1],p->org[2]);
-		//glTexCoord2f (1,0);
-		DS_TEXCOORD2T16(8<<4,0);
-		nds_vert3f (p->org[0] + up[0]*scale, p->org[1] + up[1]*scale, p->org[2] + up[2]*scale);
-		//glTexCoord2f (0,1);
-		DS_TEXCOORD2T16(0,8<<4);
-		nds_vert3f (p->org[0] + right[0]*scale, p->org[1] + right[1]*scale, p->org[2] + right[2]*scale);
+		if(scale < 1000)
+		{
+			if (scale < 20)
+				scale = 1;
+			else
+				scale = 1 + scale * 0.004;
+			//glColor3ubv ((byte *)&d_8to24table[(int)p->color]);
+			GFX_COLOR = d_8to16table[(int)p->color];
+			//glTexCoord2f (0,0);
+			DS_TEXCOORD2T16(0,0);
+			nds_vert3f (p->org[0],p->org[1],p->org[2]);
+			//glTexCoord2f (1,0);
+			DS_TEXCOORD2T16(8<<4,0);
+			nds_vert3f (p->org[0] + up[0]*scale, p->org[1] + up[1]*scale, p->org[2] + up[2]*scale);
+			//glTexCoord2f (0,1);
+			DS_TEXCOORD2T16(0,8<<4);
+			nds_vert3f (p->org[0] + right[0]*scale, p->org[1] + right[1]*scale, p->org[2] + right[2]*scale);
+		}
 #endif
 		p->org[0] += p->vel[0]*frametime;
 		p->org[1] += p->vel[1]*frametime;

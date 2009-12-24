@@ -68,15 +68,15 @@ float	anglemod(float a);
 #define fp16tofloat(n)        (((float)(n)) / (float)(1<<16))
 static inline int32 sqrtfp16(int32 a)
 {
-	SQRT_CR = SQRT_64;
+	REG_SQRTCNT = SQRT_64;
 
-	while(SQRT_CR & SQRT_BUSY);
+	while(REG_SQRTCNT & SQRT_BUSY);
 
-	SQRT_PARAM64 = ((int64)a) << 16;
+	REG_SQRT_PARAM = ((int64)a) << 16;
 
-	while(SQRT_CR & SQRT_BUSY);
+	while(REG_SQRTCNT & SQRT_BUSY);
 
-	return SQRT_RESULT32;
+	return REG_SQRT_RESULT;
 }
 #endif
 

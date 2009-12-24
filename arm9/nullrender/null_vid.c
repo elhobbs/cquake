@@ -131,6 +131,29 @@ void	VID_SetPalette (unsigned char *palette)
 {
 }
 #endif
+
+int updatepal = 0;
+int ds_vblanks = 0;
+void VID_loadPal()
+{
+#ifdef NDS
+	ds_vblanks ++;
+	if(ds_vblanks & 0x1)
+		*((u16*)SCREEN_BASE_BLOCK(15)) = 0xf058;
+	else
+		*((u16*)SCREEN_BASE_BLOCK(15)) = 0xf02b;
+		
+/*	if(!updatepal)
+	return;
+	
+	updatepal = 0;
+	
+	vramSetBankF(VRAM_F_LCD);
+	//swiCopy( pal, ds_texture_pal , count / 2 | COPY_MODE_WORD);
+	dmaCopyWords(3,(uint32*)d_8to16table, (uint32*)&VRAM_F[ds_texture_pal>>1] , 256<<1);
+	vramSetBankF(VRAM_F_TEX_PALETTE);*/
+#endif
+}
 // called for bonus and pain flashes, and for underwater color changes
 void	VID_ShiftPalette (unsigned char *palette)
 {
@@ -152,6 +175,7 @@ void	VID_ShiftPalette (unsigned char *palette)
 		v = (1<<15)|RGB15(r>>3,g>>3,b>>3);
 		*table++ = v;
 	}
+	//updatepal = 1;
 	vramSetBankF(VRAM_F_LCD);
 	//swiCopy( pal, ds_texture_pal , count / 2 | COPY_MODE_WORD);
 	dmaCopyWords(3,(uint32*)d_8to16table, (uint32*)&VRAM_F[ds_texture_pal>>1] , 256<<1);
@@ -167,21 +191,26 @@ void VID_swap_f (void)
 extern u16 *ds_display_top;
 extern u16 *ds_display_bottom;
 extern int	ds_display_bottom_height;
+
+extern int ds_bg_sub;
+extern int ds_bg_main;
+extern int ds_bg_text;
+
 	if(vid_on_top)
 	{
 		lcdMainOnBottom();
 		vid_on_top = 0;
-		ds_display_bottom = (u16*)BG_BMP_RAM(2);
 		ds_display_bottom_height = 128;
-		ds_display_top = (u16*)BG_BMP_RAM_SUB(0);
+		ds_display_bottom = (u16*)bgGetGfxPtr(ds_bg_main);
+		ds_display_top = (u16*)bgGetGfxPtr(ds_bg_sub);
 	}
 	else
 	{
 		lcdMainOnTop();
 		vid_on_top = 1;
-		ds_display_top = (u16*)BG_BMP_RAM(2);
-		ds_display_bottom = (u16*)BG_BMP_RAM_SUB(0);
 		ds_display_bottom_height = 192;
+		ds_display_bottom = (u16*)bgGetGfxPtr(ds_bg_sub);
+		ds_display_top = (u16*)bgGetGfxPtr(ds_bg_main);
 	}
 	//memset(ds_display_bottom,0,256*192);
 	//memset(ds_display_top,0,256*192);
@@ -208,6 +237,7 @@ void	VID_Init (unsigned char *palette)
 	//vid.buffer = BG_GFX;
 	//vid.buffer = Hunk_AllocName(320*200,"screen");
 	Cmd_AddCommand ("v_swap",VID_swap_f);
+	show_overlay(false,false);
 }
 
 // Called at shutdown

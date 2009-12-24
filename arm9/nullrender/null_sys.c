@@ -28,7 +28,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include <windows.h>
 #include <gl\gl.h>
 #include <gl\glu.h>
-#include <gl\glaux.h>
+//#include <gl\glaux.h>
 
 static double		pfreq;
 static double		curtime = 0.0;
@@ -39,12 +39,23 @@ static int			lowshift;
 
 #ifdef NDS
 #include <fat.h>
-#include "IPCFifo.h"
+//#include "IPCFifo.h"
 #include "cyg-profile.h"
 #include "fat\partition.h"
+//#include "nds/arm9/dldi.h"
 #include <sys/stat.h>
-#include <sys/dir.h>
+#include <dirent.h>
+#include <unistd.h>
 
+
+u16		*ds_display_top; 
+u16		*ds_display_bottom;
+int		ds_display_bottom_height;
+u16		*ds_display_menu; 
+
+int ds_bg_sub = 0;
+int ds_bg_main = 0;
+int ds_bg_text = 0;
 
 #ifdef USE_WIFI
 #include <dswifi9.h>
@@ -54,6 +65,7 @@ static int			lowshift;
 #endif
 
 #define KEYS_CUR (( ((~REG_KEYINPUT)&0x3ff) | (((~IPC->buttons)&3)<<10) | (((~IPC->buttons)<<6) & (KEY_TOUCH|KEY_LID) ))^KEY_LID)
+//const DISC_INTERFACE* dldi_disc;
 
 void Sys_Wait(float t);
 void waitforit(void)
@@ -62,7 +74,7 @@ void waitforit(void)
 	if(developer.value)
 	{
 	Con_Printf("\nwait for it...");
-	while((KEYS_CUR & KEY_A) == 0);
+	while((keysCurrent() & KEY_A) == 0);
 	Con_Printf("done.\n");
 	Sys_Wait(0.2f);
 	}
@@ -76,7 +88,7 @@ void waitforit(void)
 qboolean			isDedicated;
 //extern const GBFS_FILE  data_gbfs;
 
-#ifdef _WIN32
+#ifdef _WIN322
 byte        scantokey[128] = 
 					{ 
 //  0           1       2       3       4       5       6       7 
@@ -240,6 +252,14 @@ int filelength (FILE *f)
 	return end;
 }
 
+#ifdef NDS
+#define CLUSTER_FIRST	0x00000002
+static inline sec_t _FAT_fat_clusterToSector (PARTITION* partition, uint32_t cluster) {
+	return (cluster >= CLUSTER_FIRST) ? 
+		((cluster - CLUSTER_FIRST) * (sec_t)partition->sectorsPerCluster) + partition->dataStart : 
+		partition->rootDirStart;
+}
+#endif
 int Sys_FileOpenRead (char *path, int *hndl)
 {
 	FILE	*f;
@@ -386,11 +406,13 @@ void Sys_FileSeek (int handle, int position)
 	}
 //	VID_ForceLockState (t);
 }
+
+
 int nds_readFile(int handle, void *dest_r, int count)
 {
 int i;
 #ifdef NDS
-	const IO_INTERFACE* disc = sys_handles[handle].partition->disc;
+	const DISC_INTERFACE* disc = sys_handles[handle].partition->disc;
 	u32 current = sys_handles[handle].currentPosition;
 	u32 preBytes = current % BYTES_PER_READ;
 	u32 sector = sys_handles[handle].startSector + (current/BYTES_PER_READ);
@@ -445,10 +467,12 @@ int i;
 	return x;
 #endif
 }
+
 int Sys_FileRead (int handle, void *dest, int count)
 {
 	//int		t;
 	int		x;
+	int tIME;
 
 	//	t = VID_ForceUnlockedAndReturnState ();
 #ifdef NDS
@@ -514,36 +538,27 @@ void Sys_mkdir (char *path)
 void show_overlay(qboolean show,qboolean showkeys)
 {
 #ifdef NDS
-	if(1 || show)
+	if(show)
 	{
-		BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_1;
-		BG0_CR &= (~BG_PRIORITY_3);
-		BG0_CR |= BG_PRIORITY_2;
-#if 1
-extern u16 *ds_display_bottom;
-extern int ds_display_bottom_height;
-		if(vid.buffer && !cl.intermission)
-		{
-			//Con_Printf("clearing vmem\n");
-			memset(((u16*)BG_BMP_RAM(2)), 0,vid.width*vid.height);
-			memset(vid.buffer,0,vid.width*vid.height);
-		}
-#endif
+		//bgSetPriority(3,1);
+		//bgSetPriority(0,2);
 	}
 	else
 	{
-		BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_2;
-		BG0_CR = BG_PRIORITY_1;
+		//bgSetPriority(3,2);
+		//bgSetPriority(0,1);
+		memset(((u16*)BG_BMP_RAM(2)), 0,vid.width*vid.height);
+		memset((char *)BG_BMP_RAM_SUB(0),0,vid.height*vid.width);
+		if(vid.buffer)
+			memset(vid.buffer,0,vid.width*vid.height);
 	}
-#endif
-
-#ifdef NDS
+	bgSetPriority(3,1);
+	bgSetPriority(0,2);
 	int i;
 	for(i=0;i<32*32;i++)
 	{
 		((u16*)SCREEN_BASE_BLOCK(15))[i] = (u16)' ';
 	}
-	memset((char *)BG_BMP_RAM_SUB(0),0,vid.height*vid.width);
 #endif
 	if(showkeys)
 	{
@@ -567,12 +582,26 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 {
 }
 
+int fifoError(char *buffer, ...) // expected to be defined externally.
+{
+	va_list         argptr;
+	va_start (argptr,buffer);
+
+	Sys_Error (buffer,argptr);
+
+	va_end (argptr);
+	return 0;
+}
+
+#ifdef WIN32
+#define iprintf printf
+#endif
 
 void Sys_Error (char *error, ...)
 {
 	va_list         argptr;
 
-	printf ("Sys_Error: ");   
+	iprintf ("Sys_Error: ");   
 	va_start (argptr,error);
 #ifdef NDS
 	viprintf (error,argptr);
@@ -580,10 +609,13 @@ void Sys_Error (char *error, ...)
 	vprintf (error,argptr);
 #endif
 	va_end (argptr);
-	printf ("\n");
+	iprintf ("\n");
 
 #ifdef NDS
-	BG1_CR &= (~BG_PRIORITY_3);
+	REG_BG0CNT |= BG_PRIORITY_3;
+	REG_BG2CNT |= BG_PRIORITY_3;
+	REG_BG3CNT |= BG_PRIORITY_3;
+	REG_BG1CNT &= (~BG_PRIORITY_3);
 #endif
 	exit (1);
 }
@@ -600,6 +632,22 @@ void Sys_Printf (char *fmt, ...)
 #endif
 	va_end (argptr);
 }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void sgIP_dbgprint(char *fmt, ...)
+{
+	va_list         argptr;
+	
+	va_start (argptr,fmt);
+	Con_Printf (fmt,argptr);
+	va_end (argptr);
+}
+#ifdef __cplusplus
+};
+#endif
 
 void Sys_Quit (void)
 {
@@ -726,10 +774,8 @@ char *Sys_ConsoleInput(void)
 	static int	len = 0;
 	char		ch;
 
-#ifndef _WIN32
 	if (!isDedicated)
 		return NULL;
-#endif
 
 #ifdef WIN32
 	if (! kbhit())
@@ -782,59 +828,23 @@ void Sys_Wait(float t)
 
 }
 
-#ifdef _WIN32
-#define	KEYBUF_SIZE	256
-static unsigned char	keybuf[KEYBUF_SIZE];
-static int				keybuf_head=0;
-static int				keybuf_tail=0;
+#ifdef WIN32
 
-#define SC_RSHIFT       0x36 
-#define SC_LSHIFT       0x2a 
 void Sys_SendKeyEvents (void)
 {
-	int k, next;
-	int outkey;
+    MSG        msg;
 
-// get key events
-
-	while (keybuf_head != keybuf_tail)
+	while (PeekMessage (&msg, NULL, 0, 0, PM_NOREMOVE))
 	{
+	// we always update if there are any event, even if we're paused
+		scr_skipupdate = 0;
 
-		k = keybuf[keybuf_tail++];
-		keybuf_tail &= (KEYBUF_SIZE-1);
+		if (!GetMessage (&msg, NULL, 0, 0))
+			Sys_Quit ();
 
-		if (k==0xe0)
-			continue;               // special / pause keys
-		next = keybuf[(keybuf_tail-2)&(KEYBUF_SIZE-1)];
-		if (next == 0xe1)
-			continue;                               // pause key bullshit
-		if (k==0xc5 && next == 0x9d) 
-		{ 
-			Key_Event (K_PAUSE, true);
-			continue; 
-		} 
-
-		// extended keyboard shift key bullshit 
-		if ( (k&0x7f)==SC_LSHIFT || (k&0x7f)==SC_RSHIFT ) 
-		{ 
-			if ( keybuf[(keybuf_tail-2)&(KEYBUF_SIZE-1)]==0xe0 ) 
-				continue; 
-			k &= 0x80; 
-			k |= SC_RSHIFT; 
-		} 
-
-		if (k==0xc5 && keybuf[(keybuf_tail-2)&(KEYBUF_SIZE-1)] == 0x9d)
-			continue; // more pause bullshit
-
-		outkey = scantokey[k & 0x7f];
-
-		if (k & 0x80)
-			Key_Event (outkey, false);
-		else
-			Key_Event (outkey, true);
-
+      	TranslateMessage (&msg);
+      	DispatchMessage (&msg);
 	}
-
 }
 #else
 void Sys_SendKeyEvents (void)
@@ -961,7 +971,7 @@ void ds_choose_game(char *base)
 	char *dirlist[DIR_LIST_COUNT*3];
 	int start,dircount = 0;
 	int pos = 0;
-	int len,pressed;
+	int len,pressed,ret;
 	int i = COM_CheckParm ("-listgame");
 
 	if(i == 0)
@@ -972,39 +982,48 @@ void ds_choose_game(char *base)
 	{
 		struct stat st;
 		char filename[256];
-		DIR_ITER* dir;
+		DIR *dir;
+		struct dirent *pent;
+		
 		if(base == 0 || *base == 0)
-			dir = diropen ("."); 
+		{
+			dir = opendir ("/"); 
+		}
 		else
-			dir = diropen (base); 
+		{
+			dir = opendir (base);
+			chdir(base);
+		}
 
 
 		if (dir == NULL) {
 			iprintf ("Unable to open the directory.\n");
 		} else {
-			while (dirnext(dir, filename, &st) == 0) {
-				if(st.st_mode & S_IFDIR)
+			while ((pent=readdir(dir))!=NULL) {
+	    		ret = stat(pent->d_name,&st);
+				if(S_ISDIR(st.st_mode))
 				{
-					if(strcmpi(filename,GAMENAME) == 0 || 
-						strcmp(filename,"..") == 0 ||
-						strcmp(filename,".") == 0)
+					if(strcmpi(pent->d_name,GAMENAME) == 0 || 
+						strcmp(pent->d_name,"..") == 0 ||
+						strcmp(pent->d_name,".") == 0)
 						continue;
-					len = strlen(filename) + 1;
+					len = strlen(pent->d_name) + 1;
 					if(pos + len >= 4096)
 						break;
 
 					dirlist[dircount++] = &buf[pos];
-					strcpy(&buf[pos],filename);
+					strcpy(&buf[pos],pent->d_name);
 					pos += len + 1;
-					
+										
 				}
 				if(dircount >= DIR_LIST_COUNT*3)
 					break;
 			}
 		}	
 		
-		dirclose (dir);	
+		closedir (dir);	
 	}
+	chdir("/");
 
 	start = pressed = pos = 0;
 
@@ -1107,10 +1126,10 @@ void quake_main (int argc, char **argv)
 				break;
 			parms.memsize -= 1024;
 		}
-		printf("default: %d\n",MINIMUM_MEMORY);
-		printf("alloced: %d\n",parms.memsize);
-		printf("try setting -heapsize to:\n");
-		printf("%d\n",(parms.memsize/1024)-16);
+		iprintf("default: %d\n",MINIMUM_MEMORY);
+		iprintf("alloced: %d\n",parms.memsize);
+		iprintf("try setting -heapsize to:\n");
+		iprintf("%d\n",(parms.memsize/1024)-16);
 		Sys_Error("testmem finished\ndon't forget to remove -testmem from cquake.ini\n");
 	}
 
@@ -1135,7 +1154,7 @@ void quake_main (int argc, char **argv)
 	if(parms.membase == 0) {
 		Sys_Error("failed to allocate membase\n");
 	}
-	printf ("\n\nmem: %p %d\n",parms.membase,parms.memsize);
+	iprintf ("\n\nmem: %p %d\n",parms.membase,parms.memsize);
 
 	//COM_InitArgv (argc, argv);
 	if (COM_CheckParm ("-rumble"))
@@ -1247,6 +1266,7 @@ void IPCReceiveUser1(u32 command, const u32 *data, u32 wordCount)
 }
 
 #ifdef USE_WIFI
+#if 0
 void Wifi_timer_50ms(void)
 {
    Wifi_Timer(50);
@@ -1275,26 +1295,25 @@ void IPC_Wifi(u32 command, const u32 *data, u32 wordCount)
 	}
 }
 #endif
+#endif
 
-void irqVBlank(void) {	
+//void irqVBlank(void) {	
 //---------------------------------------------------------------------------------
-	scanKeys();
-}
+//	scanKeys();
+//}
 
 
 
 extern const u8 default_font_bin[];
-u16		*ds_display_top; 
-u16		*ds_display_bottom;
-int		ds_display_bottom_height;
-u16		*ds_display_menu; 
+
+void VID_loadPal();
 
 void Sys_Init()
 {
 	bool ret;
 	int x, y;
 	// Turn on everything
-	powerON(POWER_ALL);
+	//powerON(POWER_ALL);
 
 	//put 3D on top
 	lcdMainOnTop();
@@ -1304,81 +1323,31 @@ void Sys_Init()
 	vramSetBankF(VRAM_F_TEX_PALETTE);
 	vramSetBankG((VRAM_G_TYPE)(1 | VRAM_OFFSET(2)));
 	vramSetBankH(VRAM_H_SUB_BG); 
-	vramSetBankI(VRAM_I_SUB_BG); 
+	vramSetBankI(VRAM_I_SUB_BG_0x06208000); 
 
 	// Subscreen as a console
 	videoSetModeSub(MODE_5_2D | DISPLAY_BG0_ACTIVE | DISPLAY_BG2_ACTIVE/* | DISPLAY_BG3_ACTIVE*/);
 	
-	SUB_BG2_CR = BG_BMP8_256x256 | BG_TILE_BASE(0) | BG_PRIORITY_0;
-	SUB_BG2_XDX = 1<<8;
- 	SUB_BG2_YDY = 1<<8;
- 	SUB_BG2_XDY = 0;
- 	SUB_BG2_YDX = 0;
- 	SUB_BG2_CX = 0;
- 	SUB_BG2_CY = 0;
-/*
-	SUB_BG2_CR = BG_BMP8_128x128 | BG_TILE_BASE(0) | BG_PRIORITY_1;
-	SUB_BG2_XDX = 1<<8;
- 	SUB_BG2_YDY = 1<<8;
- 	SUB_BG2_XDY = 0;
- 	SUB_BG2_YDX = 0;
- 	SUB_BG2_CX = 0;
- 	SUB_BG2_CY = -64<<8;
-	for (y=0; y < 128; y++)
-	{
-		for (x=0; x < 64; x++)
-		{
-			u8 first_pixel 	= y;
-			u8 second_pixel = y + 1;
-			u16 two_pixels = first_pixel | (second_pixel << 8);
-			
-			((u16*)BG_BMP_RAM_SUB(0))[y * 64 + x] = two_pixels;
-		}
-	}
-	SUB_BG3_CR = BG_BMP8_128x128 | BG_TILE_BASE(2) | BG_PRIORITY_1;
-	SUB_BG3_XDX = 1<<8;
- 	SUB_BG3_YDY = 1<<8;
- 	SUB_BG3_XDY = 0;
- 	SUB_BG3_YDX = 0;
- 	SUB_BG3_CX = -128<<8;
- 	SUB_BG3_CY = -64<<8;
-	for (y=0; y < 128; y++)
-	{
-		for (x=0; x < 64; x++)
-		{
-			u8 first_pixel 	= y;
-			u8 second_pixel = y + 1;
-			u16 two_pixels = first_pixel | (second_pixel << 8);
-			
-			((u16*)BG_BMP_RAM_SUB(2))[y * 64 + x] = two_pixels;
-		}
-	}
-*/
+	ds_bg_sub = bgInitSub(2,BgType_Bmp8,BgSize_B8_256x256,0,0);
+
 
 	videoSetMode(MODE_3_3D | DISPLAY_BG1_ACTIVE | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE);
-
-#if 1
-	BG0_CR |= BG_PRIORITY_3;
-	BG1_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(14) | BG_TILE_BASE(0) | BG_PRIORITY_0;
-	consoleInitDefault((u16*)SCREEN_BASE_BLOCK(14), (u16*)CHAR_BASE_BLOCK(0), 16);
+	bgSetPriority(0,3);
+	
+	
+	//setup stdout
+	consoleInit(0,1, BgType_Text4bpp, BgSize_T_256x256, 14,0, true,true);
 	BG_PALETTE[0]=0;	
-	BG_PALETTE[255]=0xff00;
-#else
-	SUB_BG0_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(23) | BG_TILE_BASE(2) | BG_PRIORITY_0;
-	BG_PALETTE_SUB[0]=0;	
-	BG_PALETTE_SUB[255]=0xff00;
-	consoleInitDefault((u16*)SCREEN_BASE_BLOCK_SUB(23), (u16*)CHAR_BASE_BLOCK_SUB(2), 16);
-#endif
+	BG_PALETTE[255]=0xffff;
 
-	BG2_CR = BG_32x32 | BG_COLOR_16 | BG_MAP_BASE(15) | BG_TILE_BASE(0) | BG_PRIORITY_0;
+	//setup text layer for fps, center print, and Con_Printf temp overlay
+	ds_bg_text = bgInit(2,BgType_Text4bpp,BgSize_T_256x256,15,0);
+	bgSetPriority(ds_bg_text,0);
 
-	BG3_CR = BG_BMP8_256x256 | BG_BMP_BASE(2) | BG_PRIORITY_1;
-	BG3_XDX = 1<<8;
- 	BG3_YDY = 1<<8;
- 	BG3_XDY = 0;
- 	BG3_YDX = 0;
- 	BG3_CX = 0;
- 	BG3_CY = 0;
+	//setup top bitmap for console
+	ds_bg_main = bgInit(3,BgType_Bmp8,BgSize_B8_256x256,2,0);
+	bgSetPriority(ds_bg_main,1);
+	
 
 	for (y=0; y < 192; y++)
 	{
@@ -1388,69 +1357,20 @@ void Sys_Init()
 			u8 second_pixel = y + 1;
 			u16 two_pixels = first_pixel | (second_pixel << 8);
 			
-			((u16*)BG_BMP_RAM(2))[y * 128 + x] = two_pixels;
+			//((u16*)BG_BMP_RAM(2))[y * 128 + x] = two_pixels;
+			((u16*)bgGetGfxPtr(ds_bg_main))[y * 128 + x] = two_pixels;
 		}
 	}
 	
-	ds_display_menu = ds_display_bottom = (u16*)BG_BMP_RAM(2);
 	ds_display_bottom_height = 192;
-	ds_display_top = (u16*)BG_BMP_RAM_SUB(0);
+	ds_display_menu = ds_display_bottom = (u16*)bgGetGfxPtr(ds_bg_main);
+	ds_display_top = (u16*)bgGetGfxPtr(ds_bg_sub);
 
 
-	irqInit();
-	irqSet(IRQ_VBLANK, 0);//irqVBlank);
-	IPCFifoInit();
-
-	IPCFifoSetHandler(FIFO_SUBSYSTEM_SOUND, IPCReceiveUser1);
-	IPCFifoSetHandler(FIFO_SUBSYSTEM_POWER, IPC_Power);
+	irqSet(IRQ_VBLANK, VID_loadPal);
 
 #ifdef USE_WIFI
-	IPCFifoSetHandler(FIFO_SUBSYSTEM_WIFI, IPC_Wifi);
-
-	u32 Wifi_pass= Wifi_Init(WIFIINIT_OPTION_USELED);
-	IPCFifoSendWordAsync(FIFO_SUBSYSTEM_WIFI,0,(u32)0x2004);
-	IPCFifoSendMultiAsync(FIFO_SUBSYSTEM_WIFI,1,(u32*)&Wifi_pass,1);
-	
-	TIMER3_CR = 0;//disable timer 3
-	irqSet(IRQ_TIMER3, Wifi_timer_50ms); // setup timer IRQ
-	irqEnable(IRQ_TIMER3);
-
-   	Wifi_SetSyncHandler(Wifi_arm9_synctoarm7); // tell wifi lib to use our handler to notify arm7
-
-	// set timer3
-	TIMER3_DATA = -6553; // 6553.1 * 256 cycles = ~50ms;
-	TIMER3_CR = 0x00C2; // enable, irq, 1/256 clock
-		
-	while(Wifi_CheckInit()==0)
-	{ // wait for arm7 to be initted successfully
-		while(REG_VCOUNT>192); // wait for vblank
-		while(REG_VCOUNT<192);
-	}
-	Con_Printf("Connecting via WFC data\n");
-	{ // simple WFC connect:
-		int i;
-		Con_Printf("Wifi_AutoConnect...");
-		Wifi_AutoConnect(); // request connect
-		//Con_Printf("%d.",i);
-		while(1) {
-			//Con_Printf("Wifi_AssocStatus...");
-			i=Wifi_AssocStatus(); // check status
-			//Con_Printf("%d.",i);
-			if(i==ASSOCSTATUS_ASSOCIATED) {
-				Con_Printf("Connected successfully!\n");
-				break;
-			}
-			else if(i==ASSOCSTATUS_CANNOTCONNECT) {
-				Con_Printf("Could not connect!\n");
-                while(1);
-				break;
-			}
-			else
-			{
-				//Con_Printf("wifi: %d\n",i);
-			}
-		}
-	} // if connected, you can now use the berkley sockets interface to connect to the internet!
+Wifi_InitDefault(true);
 #endif
 
 	lcdMainOnBottom();
@@ -1458,6 +1378,7 @@ void Sys_Init()
 	glInit();
 	//glDisable(GL_TEXTURE_2D);
 	glEnable(GL_TEXTURE_2D);
+
 #if 0
 	glEnable(GL_BLEND);
 	glEnable(GL_ALPHA_TEST);
@@ -1498,13 +1419,14 @@ void Sys_Init()
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
 
-	//defaultExceptionHandler();
-	//setExceptionHandler(MYdefaultHandler) ;
+
+	//setup timer for Sys_FloatTime;
 	TIMER0_CR = TIMER_ENABLE|TIMER_DIV_1024;
 	TIMER1_CR = TIMER_ENABLE|TIMER_CASCADE;
 	
 	
-	//setExceptionHandler(MYdefaultHandler) ;
+	soundEnable();
+
 	defaultExceptionHandler();
 	//cygprofile_begin();
 }
@@ -1525,20 +1447,23 @@ extern "C" {
 #endif
 
 #ifdef WIN32
+
+int initDisplay();
+
 void Sys_Init()
 {
 	LARGE_INTEGER	PerformanceFreq;
 	unsigned int	lowpart, highpart;
 	int type;
 
-    auxInitPosition(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+    /*auxInitPosition(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     type = AUX_RGB | AUX_DEPTH16 | AUX_DOUBLE;
 
     auxInitDisplayMode(type);
     if (auxInitWindow(L"CQuake") == GL_FALSE) {
 		auxQuit();
-    }
+    }*/
 
 	MaskExceptions ();
 	Sys_SetFPCW ();
@@ -1563,8 +1488,10 @@ void Sys_Init()
 	pfreq = 1.0 / (double)lowpart;
 
 	Sys_InitFloatTime ();
+	initDisplay();
 }
 #endif
+
 
 int main(int argc,char **argv)
 {
