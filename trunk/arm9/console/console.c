@@ -80,6 +80,7 @@ void Con_ToggleConsole_f (void)
 		else
 		{
 			M_Menu_Main_f ();
+			show_overlay(false,false);
 		}
 	}
 	else

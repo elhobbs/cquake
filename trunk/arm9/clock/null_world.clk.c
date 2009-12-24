@@ -133,6 +133,167 @@ int SV_HullCheck_r (hull_t *hull , int num, float p1f, float p2f, float* p1, flo
 	return ret;
 }
 
+#define HULLCHECKSTATE_EMPTY 0
+#define HULLCHECKSTATE_SOLID 1
+#define HULLCHECKSTATE_DONE 2
+
+#if 1
+int SV_HullCheck_f (hull_t *hull , int num, int p1f, int p2f, int* p1, int* p2, trace_t *trace)
+{
+	mclipnode_t	*node,*split;
+	mplane_t	*plane;
+	int		t[2];
+	int		frac, frac2;
+	int		mid[3], mid2[3];
+	int			side, ret, onplane;
+	int		midf, midf2, adjf;
+
+
+	split = 0;
+	//find the split node
+	do {
+		//found a leaf
+		if(num < 0)
+		{
+			//do something???
+			//putParticleLine(p1,p2,12*16);
+			if (num != CONTENTS_SOLID)
+			{
+				//putParticleLine(p1,p2,14*16);
+				trace->allsolid = false;
+				if (num == CONTENTS_EMPTY)
+					trace->inopen = true;
+				else
+					trace->inwater = true;
+				return 0;		// empty
+			}
+			else
+			{
+				if(trace->inopen == false)
+					trace->startsolid = true;
+				return 1;		//solid
+			}
+		}
+
+		//
+		// find the point distances
+		//
+		node = hull->clipnodes + num;
+		plane = node->plane;
+
+		if (plane->type < 3)
+		{
+			t[0] = p1[plane->type] - plane->idist;
+			t[1] = p2[plane->type] - plane->idist;
+		}
+		else
+		{
+			t[0] = IDotProduct (plane->inormal, p1) - plane->idist;
+			t[1] = IDotProduct (plane->inormal, p2) - plane->idist;
+		}
+		//both in front
+		if (t[0] >= 0 && t[1] >= 0)
+		{
+			num = node->children[0];
+			continue;
+		}
+
+		//both behind
+		if (t[0] < 0 && t[1] < 0)
+		{
+			num = node->children[1];
+			continue;
+		}
+		
+		split = node;
+		//we have a split
+		break;
+	} while(1);
+
+	// put the crosspoint SURFACE_CLIP_EPSILON pixels on the near side
+	onplane = 0;
+	if ( t[0] < t[1] ) {
+		//idist = 1.0/(t[0]-t[1]);
+		side = 1;
+		//frac = frac2 = t[0]*idist;
+		frac = frac2 = idiv64(t[0],t[0]-t[1]);
+		adjf = idiv64(ISURFACE_CLIP_EPSILON,(t[1]-t[0]));
+	} else if (t[0] > t[1]) {
+		//idist = 1.0/(t[0]-t[1]);
+		side = 0;
+		//frac = frac2 = t[0]*idist;
+		frac = frac2 = idiv64(t[0],t[0]-t[1]);
+		adjf = idiv64(ISURFACE_CLIP_EPSILON,(t[0]-t[1]));
+	} else {
+		side = 0;
+		frac = FP16(1);
+		frac2 = 0;
+		//adjf = adj[0] = adj[1] = adj[2] = 0.0f;
+		adjf = 0;
+		//this is a point
+		//do something special???
+	}
+
+	frac -= adjf;
+
+	// move up to the node
+	if ( frac < 0 ) {
+		frac = 0;
+	}
+	if ( frac > FP16(1) ) {
+		frac = FP16(1);
+	}
+		
+	midf = p1f + imul64((p2f - p1f),frac);
+
+	mid[0] = p1[0] + imul64((frac),(p2[0] - p1[0]));
+	mid[1] = p1[1] + imul64((frac),(p2[1] - p1[1]));
+	mid[2] = p1[2] + imul64((frac),(p2[2] - p1[2]));
+
+	ret = SV_HullCheck_f( hull, node->children[side], p1f, midf, p1, mid, trace );
+	if(ret != 0)
+		return ret;
+
+
+	frac2 += adjf;
+
+	// go past the node
+	if ( frac2 < 0 ) {
+		frac2 = 0;
+	}
+	if ( frac2 > FP16(1) ) {
+		frac2 = FP16(1);
+	}
+		
+	midf2 = p1f + imul64((p2f - p1f),frac2);
+
+	mid2[0] = p1[0] + imul64((frac2),(p2[0] - p1[0]));
+	mid2[1] = p1[1] + imul64((frac2),(p2[1] - p1[1]));
+	mid2[2] = p1[2] + imul64((frac2),(p2[2] - p1[2]));
+
+
+	ret = SV_HullCheck_f( hull, node->children[side^1], midf, p2f, mid, p2 , trace);
+	if(ret != 1)
+		return ret;
+		
+	if (!side)
+	{
+		VectorCopy (plane->normal, trace->plane.normal);
+		trace->plane.dist = plane->dist;
+		trace->ifraction = midf;
+		IVectorCopy (mid, trace->iendpos);
+	}
+	else
+	{
+		VectorSubtract (vec3_origin, plane->normal, trace->plane.normal);
+		trace->plane.dist = -plane->dist;
+		trace->ifraction = midf;
+		IVectorCopy (mid, trace->iendpos);
+	}
+
+	return 2;
+}
+#else
 int SV_HullCheck_f (hull_t *hull , int num, int p1f, int p2f, int* p1, int* p2, trace_t *trace)
 {
 	mclipnode_t	*node,*split;
@@ -351,6 +512,7 @@ int SV_HullCheck_f (hull_t *hull , int num, int p1f, int p2f, int* p1, int* p2, 
 
 	return 0;
 }
+#endif
 
 qboolean SV_RecursiveHullCheck (hull_t *hull, int num, float p1f, float p2f, vec3_t p1, vec3_t p2, trace_t *trace)
 {

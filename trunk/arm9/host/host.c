@@ -622,6 +622,7 @@ Host_Frame
 Runs all active servers
 ==================
 */
+void Draw_CharacterCenter (int x, int y, int num);
 void _Host_Frame (float time)
 {
 	static double		time1 = 0;
@@ -632,27 +633,35 @@ void _Host_Frame (float time)
 	if (setjmp (host_abortserver) )
 		return;			// something bad happened, or the server disconnected
 
+	//Draw_CharacterCenter (8, 0, 'A');
 // keep the random time dependent
 	rand ();
 	
+	//Draw_CharacterCenter (8, 0, 'B');
 // decide the simulation time
 	if (!Host_FilterTime (time))
 		return;			// don't run too fast, or packets will flood out
 		
+	//Draw_CharacterCenter (8, 0, 'C');
 // get new key events
 	Sys_SendKeyEvents ();
 
+	//Draw_CharacterCenter (8, 0, 'D');
 // allow mice or other external controllers to add commands
 	IN_Commands ();
 
+	//Draw_CharacterCenter (8, 0, 'E');
 //update rumble
 	ds_rumble_state();
 
+	//Draw_CharacterCenter (8, 0, 'F');
 // process console commands
 	Cbuf_Execute ();
 
+	//Draw_CharacterCenter (8, 0, 'G');
 	NET_Poll();
 
+	//Draw_CharacterCenter (8, 0, 'H');
 // if running the server locally, make intentions now
 	if (sv.active)
 		CL_SendCmd ();
@@ -663,9 +672,11 @@ void _Host_Frame (float time)
 //
 //-------------------
 
+	//Draw_CharacterCenter (8, 0, 'I');
 // check for commands typed to the host
 	Host_GetConsoleCommands ();
 	
+	//Draw_CharacterCenter (8, 0, 'J');
 	if (sv.active)
 		Host_ServerFrame ();
 
@@ -675,6 +686,7 @@ void _Host_Frame (float time)
 //
 //-------------------
 
+	//Draw_CharacterCenter (8, 0, 'K');
 // if running the server remotely, send intentions now after
 // the incoming messages have been read
 	if (!sv.active)
@@ -682,6 +694,7 @@ void _Host_Frame (float time)
 
 	host_time += host_frametime;
 
+	//Draw_CharacterCenter (8, 0, 'L');
 // fetch results from server
 	if (cls.state == ca_connected)
 	{
@@ -692,11 +705,14 @@ void _Host_Frame (float time)
 	if (host_speeds.value)
 		time1 = Sys_FloatTime ();
 		
+	//Draw_CharacterCenter (8, 0, 'M');
 	SCR_UpdateScreen ();
 
+	//Draw_CharacterCenter (8, 0, 'N');
 	if (host_speeds.value)
 		time2 = Sys_FloatTime ();
 		
+	//Draw_CharacterCenter (8, 0, 'O');
 // update audio
 	if (cls.signon == SIGNONS)
 	{
@@ -706,6 +722,7 @@ void _Host_Frame (float time)
 	else
 		S_Update (vec3_origin, vec3_origin, vec3_origin, vec3_origin);
 	
+	//Draw_CharacterCenter (8, 0, 'P');
 	CDAudio_Update();
 
 	if (host_speeds.value)
@@ -932,7 +949,7 @@ void Host_Shutdown(void)
 	
 	if (isdown)
 	{
-		printf ("recursive shutdown\n");
+		//iprintf ("recursive shutdown\n");
 		return;
 	}
 	isdown = true;

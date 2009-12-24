@@ -1,7 +1,13 @@
 #include "quakedef.h"
 #include "null_ralias.h"
 #include "ds_textures.h"
+#ifdef WIN32
+#include <windows.h>
+#include <gl\gl.h>
 
+extern int texnum_sky_top,texnum_sky_bottom;
+
+#endif
 
 //
 // view origin
@@ -20,6 +26,15 @@ int			r_surf_tri,r_alias_tri;
 
 cvar_t	r_drawentities = {"r_drawentities","1"};
 cvar_t	r_draw = {"r_draw","1"};
+extern cvar_t	ds_draw;
+extern cvar_t	ds_drawsky;
+extern cvar_t	ds_drawturb;
+extern cvar_t	ds_clip_near;
+extern cvar_t	ds_clip_far;
+
+void glRotateX(float x);
+void glRotateY(float x);
+void glRotateZ(float x);
 
 //
 // screen size info
@@ -110,17 +125,15 @@ void ds_rotate_z(float angle) {
 
 void R_RotateForEntity (entity_t *e)
 {
-#ifdef NDS
     glTranslate3f32 (floattodsv16(e->origin[0]),  floattodsv16(e->origin[1]),  floattodsv16(e->origin[2]));
-#if 0
-    glRotatef (-e->angles[1],  0, 0, 1);
-    glRotatef (e->angles[0],  0, 1, 0);
-    glRotatef (-e->angles[2],  1, 0, 0);
+#if 1
+    glRotateZ (e->angles[1]);//,  0, 0, 1);
+    glRotateY (-e->angles[0]);//,  0, 1, 0);
+    glRotateX (e->angles[2]);//,  1, 0, 0);
 #else
     ds_rotate_z (e->angles[1]);//,  0, 0, 1);
     ds_rotate_y (-e->angles[0]);//,  0, 1, 0);
     ds_rotate_x (e->angles[2]);//,  1, 0, 0);
-#endif
 #endif
 }
 
@@ -280,7 +293,7 @@ void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect)
 
 	//R_SetVrect (pvrect, &r_refdef.vrect, lineadj);
 
-	MYgluPerspective (r_refdef.fov_y,  aspect,  0.005,  40.0);
+	MYgluPerspective (r_refdef.fov_y,  aspect,  ds_clip_near.value,  ds_clip_far.value);
 	//MYgluPerspective (r_refdef.fov_y,  aspect,  1.0f,  40.0);
 
 	x = r_refdef.vrect.x;
@@ -550,12 +563,9 @@ void EmitPoly (msurface_t *fa,int pts[][5])
 	
 	//if(r_draw.value)
 	//{
-#ifdef NDS
 		glBegin(GL_TRIANGLES);
-#endif
 		for(i=2;i<lnumverts;i++)
 		{
-#ifdef NDS
 			DS_TEXCOORD2T16(pts[0][3],pts[0][4]);
 			DS_VERTEX3V16(pts[0][0],pts[0][1],pts[0][2]);
 
@@ -564,9 +574,10 @@ void EmitPoly (msurface_t *fa,int pts[][5])
 
 			DS_TEXCOORD2T16(pts[i][3],pts[i][4]);
 			DS_VERTEX3V16(pts[i][0],pts[i][1],pts[i][2]);
-
-#endif		
 		}
+#ifndef NDS
+		glEnd();
+#endif
 	//}
 }
 
@@ -575,13 +586,15 @@ float	turbsin[] =
 {
 	#include "gl_warp_sin.h"
 };
-#define TURBSCALE (256.0 / (2 * M_PI))
+//#define TURBSCALE (256.0 / (2 * M_PI))
+#define TURBSCALE 40
 
 float speedscale;
 
 void EmitTurbPoly (msurface_t *fa)
 {
 	int			i,texnum,os,ot,ss,tt;
+	int			irealtime = realtime*8;
 	float		*vec;
 	medge_t		*pedges, *pedge;
 	texture_t *t;
@@ -591,6 +604,8 @@ void EmitTurbPoly (msurface_t *fa)
 	int	soff,toff;
 	int pts[64][5];
 	
+	if(ds_drawturb.value == 0)
+		return;
 	t = R_TextureAnimation (fa->texinfo->texture);
 	texnum = ds_load_bsp_texture(r_currentmodel,t);
 #ifdef NDS
@@ -630,20 +645,41 @@ void EmitTurbPoly (msurface_t *fa)
 		os = CALC_COORD(v2,u) - soff;
 		ot = CALC_COORD(v2,v) - toff;
 
-			ss = os + turbsin[(int)((ot*0.125+realtime) * TURBSCALE) & 255]*(1<<4);
-
-			tt = ot + turbsin[(int)((os*0.125+realtime) * TURBSCALE) & 255]*(1<<4);
+			//ss = os + turbsin[(int)(((ot+irealtime)>>3) * TURBSCALE) & 255]*(1<<4);
+			//tt = ot + turbsin[(int)(((os+irealtime)>>3) * TURBSCALE) & 255]*(1<<4);
+			//ss = os + turbsin[(int)((ot*0.125f+realtime) * TURBSCALE) & 255]*(1<<4);
+			//tt = ot + turbsin[(int)((os*0.125f+realtime) * TURBSCALE) & 255]*(1<<4);
+			ss = os + turbsin[(int)(((ot>>3)+realtime) * TURBSCALE) & 255]*(1<<4);
+			tt = ot + turbsin[(int)(((os>>3)+realtime) * TURBSCALE) & 255]*(1<<4);
 
 		pts[i][3] = ss;
 		pts[i][4] = tt;
 	}
 #ifdef NDS
-	glColor3b(232,232,232);
+	DS_COLOR(RGB15(28,28,28));
+#else
+	DS_COLOR(28);
 #endif
 	EmitPoly(fa,pts);
 
 }
 
+
+#ifdef NDS
+int64 __div64(int64 num, int64 den)
+{
+	REG_DIVCNT = DIV_64_64;
+	
+	while(REG_DIVCNT & DIV_BUSY);
+	
+	REG_DIV_NUMER = num;
+	REG_DIV_DENOM = den;
+	
+	while(REG_DIVCNT & DIV_BUSY);
+	
+	return (REG_DIV_RESULT);
+}
+#endif
 
 
 /*
@@ -660,6 +696,7 @@ void EmitSkyPolys (msurface_t *fa,int pts[][5])
 	int i, n, lindex, lnumverts;
 	int	s0, t0, s1, t1, s2, t2;
 	int dir[3];
+	int ispeedscale = (int)speedscale;
 #ifdef NDS
 long long length;
 #else
@@ -686,23 +723,24 @@ __int64 length;
 		if(length == 0)
 			length = 1;
 
-		dir[0] = (dir[0]*6*31)/length;
-		dir[1] = (dir[1]*6*31)/length;
-
-		pts[i][3] = (speedscale + dir[0]);
-		pts[i][4] = (speedscale + dir[1]);
+#ifdef NDS
+		dir[0] = __div64((dir[0]*6*31),length);
+		dir[1] = __div64((dir[1]*6*31),length);
+#else
+		dir[0] = (__int64)(dir[0]*6*31)/length;
+		dir[1] = (__int64)(dir[1]*6*31)/length;
+#endif
+		pts[i][3] = (speedscale + (dir[0]));
+		pts[i][4] = (speedscale + (dir[1]));
 		pts[i][3] <<= 4;
 		pts[i][4] <<= 4;
 	}
 	
 	//if(r_draw.value)
 	//{
-#ifdef NDS
 		glBegin(GL_TRIANGLES);
-#endif
 		for(i=2;i<lnumverts;i++)
 		{
-#ifdef NDS
 			DS_TEXCOORD2T16(pts[0][3],pts[0][4]);
 			DS_VERTEX3V16(pts[0][0],pts[0][1],pts[0][2]);
 
@@ -711,9 +749,11 @@ __int64 length;
 
 			DS_TEXCOORD2T16(pts[i][3],pts[i][4]);
 			DS_VERTEX3V16(pts[i][0],pts[i][1],pts[i][2]);
-
-#endif		
 		}
+#ifndef NDS
+		glEnd();
+#endif
+
 	//}
 }
 
@@ -739,6 +779,9 @@ extern uint32 ds_alpha_pal;
 extern uint32 ds_texture_pal;
 #endif
 	
+	if(ds_drawsky.value == 0)
+		return;
+		
 	ds_load_bsp_sky(r_currentmodel,r_sky_texture);
 
 	pedges = r_currentbmodel->edges;
@@ -770,24 +813,34 @@ extern uint32 ds_texture_pal;
 
 	
 	speedscale = realtime*8;
-	speedscale -= (int)speedscale & ~63 ;
+	speedscale -= (int)speedscale & ~63;
 
 #ifdef NDS
 	glColor3b(232,232,232);
 	GFX_TEX_FORMAT = r_sky_bottom;
 	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
 #endif
+#ifdef WIN32
+	DS_COLOR(28);
+	glBindTexture(GL_TEXTURE_2D,texnum_sky_bottom);
+#endif
 	EmitSkyPolys (fa,pts);
 
 	speedscale = realtime*16;
-	speedscale -= (int)speedscale & ~63 ;
+	speedscale -= (int)speedscale & ~63;
 
 #ifdef NDS
 	//glEnable(GL_BLEND);
 	//glColorTable(GL_RGB32_A3,ds_alpha_pal);
 	GFX_TEX_FORMAT = r_sky_top;
 	//glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (0<<11) | POLY_MODULATION);
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11) | (1<<13));
+	//glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (0<<11) | (1<<13));
+#endif
+#ifdef WIN32
+	glEnable (GL_BLEND);
+	DS_COLOR(28);
+	glBindTexture(GL_TEXTURE_2D,texnum_sky_top);
 #endif
 	EmitSkyPolys (fa,pts);
 #ifdef NDS
@@ -796,9 +849,19 @@ extern uint32 ds_texture_pal;
 	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
 #endif
 
+#ifdef WIN32
+	glDisable(GL_BLEND);
+#endif
+
 }
 
-extern cvar_t	ds_draw;
+#ifdef FIFI_SURF
+u32 dma_fifo[512] __attribute__ ((aligned (32)));
+#endif
+
+#ifdef NDS
+void R_RenderSurface(msurface_t *fa) __attribute__((section(".itcm"), long_call));
+#endif
 
 void R_RenderSurface(msurface_t *fa)
 {
@@ -816,6 +879,7 @@ void R_RenderSurface(msurface_t *fa)
 	int dynamic[3];
 	int dynamic2[4][4];
 	int			pts[64][6];
+	int dma_count;
 
 	if(ds_draw.value == 0)
 		return;
@@ -852,7 +916,7 @@ void R_RenderSurface(msurface_t *fa)
 	}
 	r_surf_draw++;
 #ifdef NDS
-	GFX_TEX_FORMAT = texnum;
+	//GFX_TEX_FORMAT = texnum;
 #endif
 
 	u = fa->texinfo->ivecs[0];
@@ -866,8 +930,13 @@ void R_RenderSurface(msurface_t *fa)
 	ss <<= 4;
 	tt <<= 4;
 
+#ifdef NDS
+	xs = div32((fa->texinfo->texture->width<<16),fa->texinfo->texture->ds.width);
+	ys = div32((fa->texinfo->texture->height<<16),fa->texinfo->texture->ds.height);
+#else
 	xs = (fa->texinfo->texture->width<<16)/fa->texinfo->texture->ds.width;
 	ys = (fa->texinfo->texture->height<<16)/fa->texinfo->texture->ds.height;
+#endif
 
 	w = (fa->extents[0]>>4)+1;
 	h = (fa->extents[1]>>4)+1;
@@ -915,6 +984,7 @@ void R_RenderSurface(msurface_t *fa)
 			numdynamic++;
 		}
 	}
+	
 	for (i=0 ; i<lnumverts ; i++)
 	{
 		lindex = r_currentbmodel->surfedges[n++];
@@ -977,34 +1047,42 @@ void R_RenderSurface(msurface_t *fa)
 			}
 			//blocklights[t*smax + s] += (rad - dist)*256;
 		}
-		colr>>=8;
-		if(colr > 255)
-			colr = 255;
+		colr>>=11;
+		if(colr > 31)
+			colr = 31;
+#ifdef NDS
+		pts[i][5] = RGB15(colr,colr,colr);
+#else
 		pts[i][5] = colr;
+#endif
 	}
 
-	//if(r_draw.value)
-	//{
+	if(r_draw.value)
+	{
 #ifdef NDS
-		glBegin(GL_TRIANGLES);
+		GFX_TEX_FORMAT = texnum;
 #endif
+		glBegin(GL_TRIANGLES);
+
 		for(i=2;i<lnumverts;i++)
 		{
-#ifdef NDS
-			glColor3b(pts[0][5],pts[0][5],pts[0][5]);
+
+			DS_COLOR(pts[0][5]);
 			DS_TEXCOORD2T16(pts[0][3],pts[0][4]);
 			DS_VERTEX3V16(pts[0][0],pts[0][1],pts[0][2]);
 
-			glColor3b(pts[i-1][5],pts[i-1][5],pts[i-1][5]);
+			DS_COLOR(pts[i-1][5]);
 			DS_TEXCOORD2T16(pts[i-1][3],pts[i-1][4]);
 			DS_VERTEX3V16(pts[i-1][0],pts[i-1][1],pts[i-1][2]);
 
-			glColor3b(pts[i][5],pts[i][5],pts[i][5]);
+			DS_COLOR(pts[i][5]);
 			DS_TEXCOORD2T16(pts[i][3],pts[i][4]);
 			DS_VERTEX3V16(pts[i][0],pts[i][1],pts[i][2]);
-#endif		
 		}
-	//}
+#ifndef NDS
+		glEnd();
+#endif
+	}
 
 }
 
@@ -1176,8 +1254,14 @@ void R_RenderWorld(void)
 	memset (&ent, 0, sizeof(ent));
 	ent.model = cl.worldmodel;
 
+#ifdef NDS
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
+	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
+#endif
+
 	r_currententity = &ent;
-	if(r_draw.value)
+	if(1)//r_draw.value)
 	{
 		R_RecursiveWorldNode (r_currentbmodel->nodes, 15);
 	}
@@ -1257,6 +1341,11 @@ void TraceLine (vec3_t start, vec3_t end, vec3_t impact);
 
 void R_SetupFrame (void)
 {
+#ifdef WIN32
+int frameBegin();
+
+	frameBegin();
+#endif
 #if 0
 	int num = floattofp16(35656.123567);
 	int a = sqrtfp16(num);
@@ -1303,52 +1392,47 @@ void R_SetupFrame (void)
 
 #ifdef NDS
 	glColor3b(255,255,255);
+	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
+	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
+	glMaterialf(GL_SPECULAR, RGB15(0,0,0));
+	glMaterialf(GL_EMISSION, RGB15(0,0,0));
 
 	//MYgluPerspective (r_refdef.fov_y,  vid.aspect,  0.005,  40.0*0.3);
+#endif
 	// Set the current matrix to be the model matrix
 	glMatrixMode(GL_MODELVIEW);
-	
-#if 0
-	//Push our original Matrix onto the stack (save state)
-	//glPushMatrix();
-	r_modelview[0] = (int)(r_vright[0]*(1<<12));
-	r_modelview[1] = (int)(r_vup[0]*(1<<12));
-	r_modelview[2] = (int)(-r_vpn[0]*(1<<12));
-	r_modelview[3] = 0;
-
-	r_modelview[4] = (int)(r_vright[1]*(1<<12));
-	r_modelview[5] = (int)(r_vup[1]*(1<<12));
-	r_modelview[6] = (int)(-r_vpn[1]*(1<<12));
-	r_modelview[7] = 0;
-
-	r_modelview[8] = (int)(r_vright[2]*(1<<12));
-	r_modelview[9] = (int)(r_vup[2]*(1<<12));
-	r_modelview[10] = (int)(-r_vpn[2]*(1<<12));
-	r_modelview[11] = 0;
-
-	r_modelview[12] = -(int)(DotProduct(r_origin,r_vright)*4.0);
-	r_modelview[13] = -(int)(DotProduct(r_origin,r_vup)*4.0);
-	r_modelview[14] = (int)(DotProduct(r_origin,r_vpn)*4.0);
-	r_modelview[15] = (1<<12);
-
-	for(int i=0;i<16;i++)
-	{
-		MATRIX_LOAD4x4 = r_modelview[i];
-	}
-#else
 	glLoadIdentity();
+	
+#ifdef NDS
+	glLight(0, RGB15(31,31,31) , floattov10(r_vright[0]), floattov10(r_vright[1]), floattov10(r_vright[2]));
+#endif
+
+
 	glRotateX(-90);
 	glRotateZ(90);//r_angle[2]);
+#ifdef NDS
 	glStoreMatrix(3);
+#endif
 	glRotateX(-r_refdef.viewangles[2]);//r_angle[1]);
 	glRotateY(-r_refdef.viewangles[0]);//r_angle[0]);
 	glRotateZ(-r_refdef.viewangles[1]);//r_angle[2]);
 #define floattodsv16(n)       ((int)((n) * (1 << 2)))
 	glTranslate3f32(-floattodsv16(r_refdef.vieworg[0]),-floattodsv16(r_refdef.vieworg[1]),-floattodsv16(r_refdef.vieworg[2]));
+#ifdef NDS
 	glStoreMatrix(4);
 #endif
-#endif
+#ifdef WIN32
+	{
+		GLfloat LightAmbient[]= { 0.5f, 0.5f, 0.5f, 1.0f }; 				// Ambient Light Values ( NEW )
+		GLfloat LightDiffuse[]= { 1.0f, 1.0f, 1.0f, 1.0f };				 // Diffuse Light Values ( NEW )
+		GLfloat LightPosition[]= { 0.0f, 0.0f, 2.0f, 1.0f };				 // Light Position ( NEW )
 
+		glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);				// Setup The Ambient Light
+		glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);				// Setup The Diffuse Light
+		glLightfv(GL_LIGHT1, GL_POSITION,r_origin);			// Position The Light
+		glEnable(GL_LIGHT1);							// Enable Light One
+	}
+#endif
 }
 
 void R_EndFrame (void)
@@ -1366,6 +1450,13 @@ extern cvar_t		ds_flush;
 		//glPopMatrix(1);
 		glFlush(ds_flush.value);
 #endif
+
+#ifdef WIN32
+int frameEnd();
+
+	frameEnd();
+
+#endif
 		//Con_DPrintf("draw: %3d cull: %3d all: %3d\n",r_surf_draw,r_surf_cull,r_surf_draw+r_surf_cull);
 		//Con_DPrintf("surf: %4d alias: %4d all: %4d\n",r_surf_tri,r_alias_tri,r_surf_tri+r_alias_tri);
 }
@@ -1381,7 +1472,11 @@ void R_DrawBrushModel (entity_t *e)
 	mplane_t	*pplane;
 	qboolean	rotated;
 
-
+#ifdef NDS
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
+	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
+#endif
 	r_pcurrentvertbase = r_currentbmodel->vertexes;
 
 	if (e->angles[0] || e->angles[1] || e->angles[2])
@@ -1441,13 +1536,10 @@ void R_DrawBrushModel (entity_t *e)
 		}
 	}
 
-#ifdef NDS
-
     glPushMatrix ();
 e->angles[0] = -e->angles[0];	// stupid quake bug
 	R_RotateForEntity (e);
 e->angles[0] = -e->angles[0];	// stupid quake bug
-#endif
 	//
 	// draw texture
 	//
@@ -1473,6 +1565,8 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 	//R_BlendLightmaps ();
 #ifdef NDS
 	glPopMatrix (1);
+#else
+	glPopMatrix ();
 #endif
 }
 
@@ -1534,6 +1628,13 @@ void R_DrawSpriteModel ()
 	vec3_t		v_forward, v_right, v_up,org,ang;
 	msprite_t		*psprite;
 	int i,texnum;
+
+#ifdef NDS
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
+	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
+	glColor3b(255,255,255);
+#endif
 
 	// don't even bother culling, because it's just a single
 	// polygon without a surface cache
@@ -1649,6 +1750,7 @@ void R_DrawEntitiesOnList (void)
 		r_currententity = r_currentmodel->ents;
 		while(r_currententity)
 		{
+		//if(
 			switch (r_currentmodel->type)
 			{
 			case mod_alias:

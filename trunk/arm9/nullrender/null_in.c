@@ -23,9 +23,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include		"dsrumble.h"
 #include <ctype.h>
 #ifdef NDS
-#include "IPCFifo.h"
+//#include "IPCFifo.h"
 #endif
 
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 cvar_t	ds_rpain = {"ds_rpain","5",true};			// for damage rumble
 cvar_t	ds_rmuzzle = {"ds_rmuzzle","6",true};			// for muzzle rumble
@@ -126,6 +129,7 @@ char key_arrow[12][12] = {
 #ifdef NDS
 
 #define KEYS_CUR (( ((~REG_KEYINPUT)&0x3ff) | (((~IPC->buttons)&3)<<10) | (((~IPC->buttons)<<6) & (KEY_TOUCH|KEY_LID) ))^KEY_LID)
+
 u32 keys_last = 0;
 u32 nds_keys[] = {
 K_NDS_A,
@@ -188,7 +192,7 @@ void ds_do_tap()
 #ifdef NDS
 		if(ds_tap_time.value)
 		{
-			keys = KEYS_CUR;
+			keys = keysCurrent();
 			if(keys & KEY_TOUCH)
 			{
 				int tm = Sys_IntTime();
@@ -261,11 +265,11 @@ void keyboard_scankeys()
 
 #ifdef NDS
 touchPosition	touch  = { 0,0,0,0 };
-	keys = KEYS_CUR;
+	keys = keysCurrent();
 
 	if (keys & KEY_TOUCH)
 	{
-		touch = touchReadXY();
+		touchRead(&touch);// = touchReadXY();
 		x = touch.px;
 		y = touch.py - vofs;
 		if(y < 0)
@@ -329,6 +333,7 @@ end_quick:
 extern int vid_on_top;
 void Draw_Character2 (int x, int y, int num,char *vbuf);
 
+
 void draw_keyboard()
 {
 	int i,j,k,pos;
@@ -338,13 +343,14 @@ void draw_keyboard()
 	char *buf,*ch,*vbuf;
 	sregion_t *region;
 	int count = sizeof(key_array)/sizeof(sregion_t);
+	
 
 	if(cl.intermission || (keyboard.value == 0 && ds_osk.value == 0))
 	{
 		return;
 	}
 
-	if(scr_con_current || (key_dest == key_game && ds_osk.value))
+	if(scr_conlines || (key_dest == key_game && ds_osk.value))
 	{
 	}
 	else
@@ -368,7 +374,7 @@ void draw_keyboard()
 	}
 
 	region = &key_array[0];
-	if(ds_osk.value == 2 && !scr_con_current)
+	if(ds_osk.value == 2 && !scr_conlines)
 	{
 		region = &key_button_array;
 		count= 1;
@@ -510,12 +516,12 @@ void draw_keyboard()
 
 #ifdef NDS
 extern u16 *ds_display_bottom;
-	if(!scr_con_current && ds_osk.value == 2)
+	if(!scr_conlines && ds_osk.value == 2)
 	{
 		char * dest;
 
 		dest = (char *)ds_display_bottom;
-		dmaCopyWords(2, (uint32*)vbuf,(uint32*)dest, vid.width*16);
+		dmaCopyWords(1, (uint32*)vbuf,(uint32*)dest, vid.width*16);
 	}
 	else if(vid_on_top || ds_osk.value == 1)
 	{
@@ -523,7 +529,7 @@ extern u16 *ds_display_bottom;
 
 		dest = (char *)ds_display_bottom;
 		dest += (vid.height/2)*vid.width;
-		dmaCopyWords(2, (uint32*)vbuf,(uint32*)dest, vid.width*5*16);
+		dmaCopyWords(1, (uint32*)vbuf,(uint32*)dest, vid.width*5*16);
 	}
 #endif
 }
@@ -539,19 +545,19 @@ void IN_Commands (void)
 #ifdef NDS
 	u32 key_mask=1;
 	u32 i;
-	u32 keys = KEYS_CUR;
+	u32 keys = keysCurrent();
 
-	if(keys & KEY_LID)
+	/*if(keys & KEY_LID)
 	{
 		in_sleep_mode = 1;
-		IPCFifoSendWordAsync(FIFO_SUBSYSTEM_POWER,0,(u32)0x2004);
+		//IPCFifoSendWordAsync(FIFO_SUBSYSTEM_POWER,0,(u32)0x2004);
 		
 		while(in_sleep_mode)
 		{
 			//Con_Printf(".");
 			swiWaitForVBlank();
 		}
-	}
+	}*/
 
 	for(i=0;i<12;i++,key_mask<<=1) {
 		if( (keys & key_mask) && !(keys_last & key_mask)) {
@@ -660,7 +666,88 @@ void IN_Shutdown (void)
 {
 
 }
+#ifdef WIN32
+POINT		current_pos;
+int			mouse_x, mouse_y, old_mouse_x, old_mouse_y, mx_accum, my_accum;
+int			window_center_x, window_center_y, window_x, window_y, window_width, window_height;
+RECT		window_rect;
+void ds_get_window_pos(RECT *rc);
+/*
+===========
+IN_MouseMove
+===========
+*/
+void IN_MouseMove (usercmd_t *cmd)
+{
+	int					mx, my;
+	int					i;
 
+	//if (!mouseactive)
+	//	return;
+
+		ds_get_window_pos(&window_rect);
+		window_center_x = (window_rect.left + window_rect.right) / 2;
+		window_center_y = (window_rect.top + window_rect.bottom) / 2;
+		GetCursorPos (&current_pos);
+		mx = current_pos.x - window_center_x + mx_accum;
+		my = current_pos.y - window_center_y + my_accum;
+		mx_accum = 0;
+		my_accum = 0;
+
+if (mx ||  my)
+	Con_DPrintf("mx=%d, my=%d\n%d %d\n", mx, my,window_center_x,window_center_y);
+
+	if (0)//m_filter.value)
+	{
+		mouse_x = (mx + old_mouse_x) * 0.5;
+		mouse_y = (my + old_mouse_y) * 0.5;
+	}
+	else
+	{
+		mouse_x = mx;
+		mouse_y = my;
+	}
+
+	old_mouse_x = mx;
+	old_mouse_y = my;
+
+	mouse_x *= sensitivity.value;
+	mouse_y *= sensitivity.value;
+
+// add mouse X/Y movement to cmd
+	if ( (in_strafe.state & 1) || (lookstrafe.value && (in_mlook.state & 1) ))
+		cmd->sidemove += m_side.value * mouse_x;
+	else
+		cl.viewangles[YAW] -= m_yaw.value * mouse_x;
+
+	if (in_mlook.state & 1)
+		V_StopPitchDrift ();
+		
+	if ( (in_mlook.state & 1) && !(in_strafe.state & 1))
+	{
+		cl.viewangles[PITCH] += m_pitch.value * mouse_y;
+		if (cl.viewangles[PITCH] > 80)
+			cl.viewangles[PITCH] = 80;
+		if (cl.viewangles[PITCH] < -70)
+			cl.viewangles[PITCH] = -70;
+	}
+	else
+	{
+		if ((in_strafe.state & 1) && noclip_anglehack)
+			cmd->upmove -= m_forward.value * mouse_y;
+		else
+			cmd->forwardmove -= m_forward.value * mouse_y;
+	}
+
+// if the mouse has moved, force it to the center, so there's room to move
+	if (mx || my)
+	{
+		SetCursorPos (window_center_x, window_center_y);
+	}
+}
+
+
+#endif
 
 /*
 =======
@@ -674,18 +761,22 @@ touchPosition	g_currentTouch = { 0,0,0,0 };
 
 void IN_Move (usercmd_t *cmd)
 {
+#ifdef WIN32
+	IN_MouseMove(cmd);
+#endif
+
 #ifdef NDS
 	int dx,dy;
 	scanKeys();
 	if (keysDown() & KEY_TOUCH)
 	{
-		g_lastTouch = touchReadXY();
+		touchRead(&g_lastTouch);// = touchReadXY();
 		g_lastTouch.px <<= 7;
 		g_lastTouch.py <<= 7;
 	}
 	if(keysHeld() & KEY_TOUCH)
 	{
-		g_currentTouch = touchReadXY();
+		touchRead(&g_currentTouch);// = touchReadXY();
 		// let's use some fixed point magic to improve touch smoothing accuracy
 		g_currentTouch.px <<= 7;
 		g_currentTouch.py <<= 7;
@@ -747,7 +838,20 @@ IN_Accumulate
 */
 void IN_Accumulate (void)
 {
+#ifdef NDS
 	ds_do_tap();
+#endif
+
+#ifdef WIN32
+	int		mx, my;
+	GetCursorPos (&current_pos);
+
+	mx_accum += current_pos.x - window_center_x;
+	my_accum += current_pos.y - window_center_y;
+
+// force the mouse to the center, so there's room to move
+	SetCursorPos (window_center_x, window_center_y);
+#endif
 }
 
 

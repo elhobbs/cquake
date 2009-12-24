@@ -295,7 +295,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 	}
 	fs.data = sc->data;
 	fs.format = 1;
-	fs.loop = -1;
+	fs.loop = 0;
 	fs.pan = ds_pan;
 	fs.rate = sc->speed;
 	fs.size = sc->length;
@@ -328,7 +328,7 @@ void S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float 
 		return;
 
 	fs.format = 1;
-	fs.loop = -1;
+	fs.loop = 0;
 	fs.fixed_attenuation = (int)(attenuation*(1<<16));
 	fs.fixed_volume = (int)(fvol*(1<<16));
 	fs.origin[0] = (int)origin[0];

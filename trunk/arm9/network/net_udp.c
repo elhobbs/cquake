@@ -73,6 +73,7 @@ int UDP_Init (void)
 	struct hostent *local;
 	char	buff[MAXHOSTNAMELEN];
 	struct qsockaddr addr;
+	struct in_addr ip, gateway, mask, dns1, dns2;
 	char *colon;
 #ifdef WIN32
 	WORD	wVersionRequested;
@@ -120,10 +121,13 @@ int UDP_Init (void)
 		*colon = 0;
 #else
 	// determine my name & address
+	ip = Wifi_GetIPInfo(&gateway, &mask, &dns1, &dns2);
+	
+	/*
 	unsigned long dummy;
 	unsigned long subnet_mask;
 	
-	Wifi_GetIPInfo(&dummy, &subnet_mask, &dummy, &dummy);
+	Wifi_GetIPInfo(&dummy, &subnet_mask, &dummy, &dummy);*/
 	myAddr = Wifi_GetIP();
 	
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
@@ -346,24 +350,31 @@ int UDP_Broadcast (int socket, byte *buf, int len)
 
 int UDP_Write (int socket, byte *buf, int len, struct qsockaddr *addr)
 {
-	int ret;
+	int ret,cb_write=len,cb_sent = 0;
 
-	ret = sendto (socket, buf, len, 0, (struct sockaddr *)addr, sizeof(struct qsockaddr));
-	if (ret == -1 && errno == EWOULDBLOCK)
-		return 0;
-	return ret;
+	do {
+		ret = sendto (socket, buf, cb_write, 0, (struct sockaddr *)addr, sizeof(struct qsockaddr));
+		if (ret == -1 && errno == EWOULDBLOCK)
+			return 0;
+		if(ret < 0)
+			break;
+		cb_sent += ret;
+		cb_write -= ret;
+		buf += ret;
+	} while (cb_write > 0);
+	return cb_sent;
 }
 
 //=============================================================================
 
+static char addr_buffer[64];
 char *UDP_AddrToString (struct qsockaddr *addr)
 {
-	static char buffer[22];
 	int haddr;
 
 	haddr = ntohl(((struct sockaddr_in *)addr)->sin_addr.s_addr);
-	sprintf(buffer, "%d.%d.%d.%d:%d", (haddr >> 24) & 0xff, (haddr >> 16) & 0xff, (haddr >> 8) & 0xff, haddr & 0xff, ntohs(((struct sockaddr_in *)addr)->sin_port));
-	return buffer;
+	sprintf(addr_buffer, "%d.%d.%d.%d:%d", (haddr >> 24) & 0xff, (haddr >> 16) & 0xff, (haddr >> 8) & 0xff, haddr & 0xff, ntohs(((struct sockaddr_in *)addr)->sin_port));
+	return addr_buffer;
 }
 
 //=============================================================================

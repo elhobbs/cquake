@@ -25,101 +25,85 @@
  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-	2006-07-11 - Chishm
-		* Original release
-
 */
 #ifndef _DISC_H
 #define _DISC_H
 
-#include "../common.h"
-#include "disc_io.h"
+#include "fat\common.h"
 
 /*
-Search for a block based device in the GBA slot.
-Return a pointer to a usable interface if one is found,
-NULL if not.
+A list of all default devices to try at startup, 
+terminated by a {NULL,NULL} entry.
 */
-extern const IO_INTERFACE* _FAT_disc_gbaSlotFindInterface (void);
-
-/*
-Search for a block based device in the DS slot.
-Return a pointer to a usable interface if one is found,
-NULL if not.
-*/
-#ifdef NDS
-extern const IO_INTERFACE* _FAT_disc_dsSlotFindInterface (void);
-#endif
-
-/*
-Search for a block based device in the both slots.
-Return a pointer to a usable interface if one is found,
-NULL if not.
-*/
-extern const IO_INTERFACE* _FAT_disc_findInterface (void);
+typedef struct {
+	const char* name; 
+	const DISC_INTERFACE* (*getInterface)(void);
+} INTERFACE_ID;
+extern const INTERFACE_ID _FAT_disc_interfaces[];
 
 /*
 Check if a disc is inserted
 Return true if a disc is inserted and ready, false otherwise
 */
-static inline bool _FAT_disc_isInserted (const IO_INTERFACE* disc) {
-	return disc->fn_isInserted();
+static inline bool _FAT_disc_isInserted (const DISC_INTERFACE* disc) {
+	return disc->isInserted();
 }
 
 /*
 Read numSectors sectors from a disc, starting at sector. 
-numSectors is between 1 and 256
-sector is from 0 to 2^28
+numSectors is between 1 and LIMIT_SECTORS if LIMIT_SECTORS is defined,
+else it is at least 1
+sector is 0 or greater
 buffer is a pointer to the memory to fill
 */
-static inline bool _FAT_disc_readSectors (const IO_INTERFACE* disc, u32 sector, u32 numSectors, void* buffer) {
-	return disc->fn_readSectors (sector, numSectors, buffer);
+static inline bool _FAT_disc_readSectors (const DISC_INTERFACE* disc, sec_t sector, sec_t numSectors, void* buffer) {
+	return disc->readSectors (sector, numSectors, buffer);
 }
 
 /*
 Write numSectors sectors to a disc, starting at sector. 
-numSectors is between 1 and 256
-sector is from 0 to 2^28
+numSectors is between 1 and LIMIT_SECTORS if LIMIT_SECTORS is defined,
+else it is at least 1
+sector is 0 or greater
 buffer is a pointer to the memory to read from
 */
-static inline bool _FAT_disc_writeSectors (const IO_INTERFACE* disc, u32 sector, u32 numSectors, const void* buffer) {
-	return disc->fn_writeSectors (sector, numSectors, buffer);
+static inline bool _FAT_disc_writeSectors (const DISC_INTERFACE* disc, sec_t sector, sec_t numSectors, const void* buffer) {
+	return disc->writeSectors (sector, numSectors, buffer);
 }
 
 /*
 Reset the card back to a ready state
 */
-static inline bool _FAT_disc_clearStatus (const IO_INTERFACE* disc) {
-	return disc->fn_clearStatus();
+static inline bool _FAT_disc_clearStatus (const DISC_INTERFACE* disc) {
+	return disc->clearStatus();
 }
 
 /*
 Initialise the disc to a state ready for data reading or writing
 */
-static inline bool _FAT_disc_startup (const IO_INTERFACE* disc) {
-	return disc->fn_startup();
+static inline bool _FAT_disc_startup (const DISC_INTERFACE* disc) {
+	return disc->startup();
 }
 
 /*
 Put the disc in a state ready for power down.
 Complete any pending writes and disable the disc if necessary
 */
-static inline bool _FAT_disc_shutdown (const IO_INTERFACE* disc) {
-	return disc->fn_shutdown();
+static inline bool _FAT_disc_shutdown (const DISC_INTERFACE* disc) {
+	return disc->shutdown();
 }
 
 /*
 Return a 32 bit value unique to each type of interface
 */
-static inline u32 _FAT_disc_hostType (const IO_INTERFACE* disc) {
+static inline uint32_t _FAT_disc_hostType (const DISC_INTERFACE* disc) {
 	return disc->ioType;
 }
 
 /*
 Return a 32 bit value that specifies the capabilities of the disc
 */
-static inline u32 _FAT_disc_features (const IO_INTERFACE* disc) {
+static inline uint32_t _FAT_disc_features (const DISC_INTERFACE* disc) {
 	return disc->features;
 }
 

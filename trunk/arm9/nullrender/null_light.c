@@ -77,7 +77,7 @@ void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 extern bmodel_t	*r_currentbmodel;
 	//bmodel_t *model;
 	
-	if (node->contents < 0)
+	if (node == 0 || node->contents < 0)
 		return;
 
 	splitplane = node->plane;

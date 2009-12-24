@@ -1,9 +1,12 @@
 #ifndef __DS_TEXTURES_H__
 #define __DS_TEXTURES_H__
 
+#ifdef NDS
+#define DS_NORMAL(__n) GFX_NORMAL = (__n)
+#define DS_COLOR(__c) GFX_COLOR = (__c)
 #define DS_TEXCOORD2T16(x, y) GFX_TEX_COORD = TEXTURE_PACK(x, y)
 #define DS_VERTEX3V16(x, y, z) GFX_VERTEX16 = (y << 16) | (x & 0xFFFF); GFX_VERTEX16 = ((unsigned int)(unsigned short)z)
-
+#endif
 /*
 banks A-D are broken into 64x64 chunks
 which makes 128 blocks

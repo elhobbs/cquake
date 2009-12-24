@@ -23,6 +23,13 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#define BLEND_CR		REG_BLDCNT
+#define BLEND_AB		REG_BLDALPHA
+
+extern int ds_bg_sub;
+extern int ds_bg_main;
+extern int ds_bg_text;
+
 typedef struct {
 	union {
 		byte b[2];
@@ -155,12 +162,12 @@ void toggle_stdout_f(void)
 #ifdef NDS
 	if(show_stdout)
 	{
-		BG1_CR |= BG_PRIORITY_3;
+		REG_BG1CNT |= BG_PRIORITY_3;
 		show_stdout = 0;
 	}
 	else
 	{
-		BG1_CR &= (~BG_PRIORITY_3);
+		REG_BG1CNT &= (~BG_PRIORITY_3);
 		show_stdout = 1;
 	}
 #endif
@@ -191,13 +198,16 @@ void Draw_Init (void)
 	//vid.aliasbuffer = (pixel_t *)Hunk_AllocName(256*192,"aliasbuf");
 
 #ifdef NDS
-	BG0_CR &= (~BG_PRIORITY_3);
-	BG0_CR |= BG_PRIORITY_1;
-	BG1_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(14) | BG_TILE_BASE(0) | BG_PRIORITY_3;
-	BG2_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(15) | BG_TILE_BASE(0) | BG_PRIORITY_0;
-	//SUB_BG0_CR = BG_32x32 | BG_COLOR_256 | BG_MAP_BASE(23) | BG_TILE_BASE(2) | BG_PRIORITY_0;
+	//hide stdout
+	bgSetPriority(0,1);
+
+	bgInit(1,BgType_Text8bpp,BgSize_T_256x256,14,0);
+	bgSetPriority(1,3);
+	
+	ds_bg_text = bgInit(2,BgType_Text8bpp,BgSize_T_256x256,15,0);
+	bgSetPriority(2,0);
+
 	DS_Load_Chars((u16*)CHAR_BASE_BLOCK(0),0,256);
-	//DS_Load_Chars((u16*)CHAR_BASE_BLOCK_SUB(2),0,256-32);
 
 	int i;
 	for(i=0;i<32*32;i++)
@@ -1007,7 +1017,9 @@ Call before beginning any disc IO.
 */
 void Draw_BeginDisc (void)
 {
-
+#ifdef NDS
+	*( ((u16*)SCREEN_BASE_BLOCK(15)) + 2) = 0xf00b;
+#endif
 	//D_BeginDirectRect (vid.width - 24, 0, draw_disc->data, 24, 24);
 }
 
@@ -1022,7 +1034,9 @@ Call after completing any disc IO
 */
 void Draw_EndDisc (void)
 {
-
+#ifdef NDS
+	*( ((u16*)SCREEN_BASE_BLOCK(15)) + 2) = 0xf020;
+#endif
 	//D_EndDirectRect (vid.width - 24, 0, 24, 24);
 }
 
@@ -1057,7 +1071,7 @@ BLEND_AB = ((int)ds_hud_alpha.value)|(31<<8);
 	{
 		dest16 = ((u16*)BG_BMP_RAM(2)) + ((vid.height - sb_lines)*(vid.conwidth>>1));
 		src8 = vid.buffer + ((vid.conheight - sb_lines)*vid.conwidth);
-		dmaCopyWords(2, (uint32*)src8,(uint32*)dest16, vid.conwidth*sb_lines);
+		dmaCopyWords(0, (uint32*)src8,(uint32*)dest16, vid.conwidth*sb_lines);
 	}
 #endif
 		return;
@@ -1073,7 +1087,7 @@ BLEND_AB = 0;
 #endif
 
 #ifdef NDS
-	dmaCopyWords(2, (uint32*)vid.buffer,(uint32*)dest16, SCREEN_WIDTH*SCREEN_HEIGHT);
+	dmaCopyWords(0, (uint32*)vid.buffer,(uint32*)dest16, SCREEN_WIDTH*SCREEN_HEIGHT);
 #else
 	ystep = (200<<16)/SCREEN_HEIGHT;
 	xstep = (320<<16)/SCREEN_WIDTH;

@@ -43,6 +43,8 @@ cvar_t		scr_printspeed = {"scr_printspeed","8"};
 
 cvar_t		ds_flush = {"ds_flush","0",true};
 cvar_t		ds_hud_alpha = {"ds_hud_alpha","16",true};
+cvar_t		ds_clip_near = {"ds_clip_near","0.005",true};
+cvar_t		ds_clip_far = {"ds_clip_far","40",true};
 
 qboolean	scr_initialized;		// ready to draw
 
@@ -520,6 +522,8 @@ void SCR_Init (void)
 
 	Cvar_RegisterVariable (&ds_flush);
 	Cvar_RegisterVariable (&ds_hud_alpha);
+	Cvar_RegisterVariable (&ds_clip_far);
+	Cvar_RegisterVariable (&ds_clip_near);
 
 //
 // register our commands
@@ -1057,6 +1061,7 @@ void SCR_UpdateScreen (void)
 	static float	oldlcd_x;
 	vrect_t		vrect;
 	
+	//Draw_CharacterCenter (16, 0, 'A');
 	if (scr_skipupdate || block_drawing)
 		return;
 
@@ -1074,6 +1079,7 @@ void SCR_UpdateScreen (void)
 			return;
 	}
 
+	//Draw_CharacterCenter (16, 0, 'B');
 	if (cls.state == ca_dedicated)
 		return;				// stdout only
 
@@ -1107,6 +1113,7 @@ void SCR_UpdateScreen (void)
 		vid.recalc_refdef = true;
 	}
 	
+	//Draw_CharacterCenter (16, 0, 'C');
 	if (vid.recalc_refdef)
 	{
 	// something changed, so reorder the screen
@@ -1118,6 +1125,7 @@ void SCR_UpdateScreen (void)
 //
 	//D_EnableBackBufferAccess ();	// of all overlay stuff if drawing directly
 
+	//Draw_CharacterCenter (16, 0, 'D');
 	if (scr_fullupdate++ < vid.numpages)
 	{	// clear the entire screen
 		scr_copyeverything = 1;
@@ -1128,73 +1136,111 @@ void SCR_UpdateScreen (void)
 	pconupdate = NULL;
 
 
+	//Draw_CharacterCenter (16, 0, 'E');
 	SCR_SetUpToDrawConsole ();
 	//SCR_EraseCenterString ();
 
 	//D_DisableBackBufferAccess ();	// for adapters that can't stay mapped in
 									//  for linear writes all the time
 
+	//Draw_CharacterCenter (16, 0, 'F');
 	VID_LockBuffer ();
 
+	//Draw_CharacterCenter (16, 0, 'G');
 	V_RenderView ();
 
+	//Draw_CharacterCenter (16, 0, 'H');
 	VID_UnlockBuffer ();
 
 	//D_EnableBackBufferAccess ();	// of all overlay stuff if drawing directly
 
 	if (scr_drawdialog)
 	{
+		//Draw_CharacterCenter (16, 0, 'I');
 		Sbar_Draw ();
+		
+		//Draw_CharacterCenter (16, 0, 'J');
 		Draw_FadeScreen ();
+		
+		//Draw_CharacterCenter (16, 0, 'K');
 		SCR_DrawNotifyString ();
+		
 		scr_copyeverything = true;
 	}
 	else if (scr_drawloading)
 	{
+		//Draw_CharacterCenter (16, 0, 'L');
 		SCR_DrawLoading ();
 		//Sbar_Draw ();
 	}
 	else if (cl.intermission == 1 && key_dest == key_game)
 	{
+		//Draw_CharacterCenter (16, 0, 'M');
 		Sbar_IntermissionOverlay ();
 	}
 	else if (cl.intermission == 2 && key_dest == key_game)
 	{
+		//Draw_CharacterCenter (16, 0, 'N');
 		Sbar_FinaleOverlay ();
+		
+		//Draw_CharacterCenter (16, 0, 'O');
 		SCR_CheckDrawCenterString ();
 	}
 	else if (cl.intermission == 3 && key_dest == key_game)
 	{
+		//Draw_CharacterCenter (16, 0, 'P');
 		SCR_CheckDrawCenterString ();
 	}
 	else
 	{
+	
+		//Draw_CharacterCenter (16, 0, 'Q');
 		SCR_DrawRam ();
+	
+		//Draw_CharacterCenter (16, 0, 'R');
 		SCR_DrawNet ();
+	
+		//Draw_CharacterCenter (16, 0, 'S');
 		SCR_DrawTurtle ();
+	
+		//Draw_CharacterCenter (16, 0, 'T');
 		SCR_DrawPause ();
+	
+		//Draw_CharacterCenter (16, 0, 'U');
 		SCR_CheckDrawCenterString ();
+	
+		//Draw_CharacterCenter (16, 0, 'V');
 		Sbar_Draw ();
+	
+		//Draw_CharacterCenter (16, 0, 'W');
 		SCR_DrawConsole ();
+	
+		//Draw_CharacterCenter (16, 0, 'X');
 		M_Draw ();
+	
+		//Draw_CharacterCenter (16, 0, 'Y');
 		draw_keyboard();
 	}
 
+	//Draw_CharacterCenter (16, 0, 'Z');
 	SCR_DrawFPS ();
 
 	//D_DisableBackBufferAccess ();	// for adapters that can't stay mapped in
 									//  for linear writes all the time
+	//Draw_CharacterCenter (16, 0, '0');
 	if (pconupdate)
 	{
 		D_UpdateRects (pconupdate);
 	}
 
+	//Draw_CharacterCenter (16, 0, '1');
 	V_UpdatePalette ();
 
 //
 // update one of three areas
 //
 
+	//Draw_CharacterCenter (16, 0, '2');
 	if (scr_copyeverything)
 	{
 		vrect.x = 0;
@@ -1225,6 +1271,7 @@ void SCR_UpdateScreen (void)
 	
 		VID_Update (&vrect);
 	}
+	//Draw_CharacterCenter (16, 0, '3');
 }
 
 

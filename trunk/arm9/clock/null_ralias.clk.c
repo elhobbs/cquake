@@ -2,6 +2,11 @@
 #include "null_ralias.h"
 #include "ds_textures.h"
 
+#ifdef WIN32
+#include <windows.h>
+#include <gl\gl.h>
+#endif
+
 aliashdr_t		*r_aliashdr;
 mdl_t 			*r_mdl;
 trivertx_t		*r_pverts;
@@ -16,6 +21,18 @@ int				r_frameofs;
 
 float		r_ziscale;
 
+#define NUMVERTEXNORMALS	162
+extern int	ds_normals[NUMVERTEXNORMALS];
+
+#if 0
+// precalculated dot products for quantized angles
+#define SHADEDOT_QUANT 16
+float	r_avertexnormal_dots[SHADEDOT_QUANT][256] =
+#include "anorm_dots.h"
+;
+
+float	*shadedots = r_avertexnormal_dots[0];
+#endif
 
 extern entity_t *r_currententity;
 extern model_t *r_currentmodel;
@@ -30,6 +47,8 @@ void glScale3f32(int x, int y, int z)
   MATRIX_SCALE = (x);
   MATRIX_SCALE = (y);
   MATRIX_SCALE = (z);
+#else
+	glScalef(x/4096.0f,y/4096.0f,z/4096.0f);
 #endif
 }
 static char alias_skin_name[128];
@@ -50,13 +69,13 @@ void R_SetAliasSkin(aliashdr_t *paliashdr) {
 	
 	//iprintf("sp: %x\n",stack_ptr);
 
-	if(r_currententity->skinnum > r_mdl->numskins)
+	if(r_currententity->skinnum >= r_mdl->numskins)
 	{
 		//Sys_Error("error");
 		r_currententity->skinnum = 0;
 
 	}
-	
+
 	pskindesc = ((maliasskindesc_t *)BYTE_OFFSET(paliashdr,paliashdr->skindesc)) + r_currententity->skinnum;
 	if (pskindesc->type == ALIAS_SKIN_GROUP)
 	{
@@ -96,8 +115,8 @@ void R_SetAliasSkin(aliashdr_t *paliashdr) {
 	r_affinetridesc.seamfixupX16 =  (r_mdl->skinwidth >> 1);// << 16;
 	r_affinetridesc.skinheight = r_mdl->skinheight;
 #endif
-	twidth = pskindesc->ds.width>>1;
-	twidth <<= 4;
+	twidth = pskindesc->ds.width;//>>1;
+	twidth <<= 3;//4;
 	texnum = ds_load_alias_texture(r_currentmodel,pskindesc);
 #if 0
 		if(!r_currentmodel->cache.data)
@@ -184,9 +203,10 @@ void R_SetAliasFrame(aliashdr_t *paliashdr) {
 
 int R_LightPoint (vec3_t p);
 
+int ambientlight,shadelight;
 void ds_lightpoint(vec3_t p)
 {
-int ambientlight,shadelight,lnum;
+int lnum;
 float add;
 	vec3_t dist;
 
@@ -198,6 +218,9 @@ float add;
 	{
 #ifdef NDS
 		glColor3b(255,255,255);
+		ambientlight = shadelight = 255;
+		glMaterialf(GL_AMBIENT, RGB15(24,24,24));
+		glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
 #endif
 		return;
 	}
@@ -224,16 +247,16 @@ float add;
 			}
 		}
 	}
-	if(shadelight > 192)
-		shadelight = 192;
-	else if(shadelight < 8)
-		shadelight = 8;
-#if 0
+	if(shadelight > 255)
+		shadelight = 255;
+	else if(shadelight < 32)
+		shadelight = 32;
+#if 1
 	// clamp lighting so it doesn't overbright as much
-	if (ambientlight > 128)
-		ambientlight = 128;
-	if (ambientlight + shadelight > 192)
-		shadelight = 192 - ambientlight;
+	if (ambientlight > 64)
+		ambientlight = 64;
+	//if (ambientlight + shadelight > 255)
+	//	shadelight = 255 - ambientlight;
 #endif
 /*
 // ZOID: never allow players to go totally black
@@ -244,13 +267,20 @@ float add;
 */
 #ifdef NDS
 	glColor3b(shadelight,shadelight,shadelight);
+	glMaterialf(GL_AMBIENT, RGB8(ambientlight,ambientlight,ambientlight));
+	//glMaterialf(GL_AMBIENT, RGB8(8,8,8));
+	glMaterialf(GL_DIFFUSE, RGB8(shadelight,shadelight,shadelight));
+	glMaterialf(GL_SPECULAR, RGB8(shadelight,shadelight,shadelight));
 #endif
+
+	return;
 }
 
 	extern int r_alias_tri;
 void R_DrawAliasModel ()
 {
-	int			i;
+	int			i,light,c0,c1,c2;
+	int c = shadelight - ambientlight;
 	aliashdr_t	*paliashdr;
 	mdl_t 		*pmdl;
 	trivertx_t	*index0,*index1,*index2;
@@ -274,8 +304,9 @@ void R_DrawAliasModel ()
 	
 	//fvec_t iw,ih;
 	
-	
-	
+#ifdef NDS
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | POLY_FORMAT_LIGHT0 | (1 << 13));
+#endif	
 
 	for(i=0;i<3;i++) {
 		mins[i] = (short)(r_currententity->origin[i] + r_currentmodel->mins[i]);
@@ -355,16 +386,19 @@ void R_DrawAliasModel ()
 	R_AliasPreparePoints();
 #ifdef NDS
 	glPopMatrix (1);
+	return;
 #endif
 #endif
 
 #if 1
-#ifdef NDS
 	glPushMatrix ();
 
 		R_RotateForEntity (r_currententity);
 
 #define fvectodsv16(n)        ((n) >> 14)
+#ifdef WIN32
+#define floattof32(n)        ((int)((n) * (1 << 12))) /*!< \brief convert float to f32 */
+#endif
 		glTranslate3f32(floattodsv16(pmdl->scale_origin[0]),
 			floattodsv16(pmdl->scale_origin[1]),
 			floattodsv16(pmdl->scale_origin[2]));
@@ -374,10 +408,13 @@ void R_DrawAliasModel ()
 //r_pverts = (trivertx_t*)(((u32)r_pverts) | 0x0400000);
 //r_pstverts = (mstvert_t*)(((u32)r_pstverts) | 0x0400000);
 //r_ptri = (mtriangle_t*)(((u32)r_ptri) | 0x0400000);
+	//GFX_POLY_FORMAT |= POLY_FORMAT_LIGHT0;
 	glBegin(GL_TRIANGLES);
-#endif	
+
 	for(i=0;i<r_numtri;i++) {
 		r_alias_tri++;
+		
+		//c = r_ptri[i].
 	
 		st0 = &r_pstverts[r_ptri[i].vertindex[0]];
 		index0 = &r_pverts[r_ptri[i].vertindex[0]];
@@ -394,6 +431,12 @@ void R_DrawAliasModel ()
 		ax0 = index0->v[0];
 		ay0 = index0->v[1];
 		az0 = index0->v[2];
+		/*c0 = ambientlight;
+		c0 += ((ds_normals[index0->lightnormalindex][2]*c)>>14);
+		if(c0 < 0)
+			c0 = 0;
+		else if(c0 > 255)
+			c0 = 255;*/
 		
 		as1 = (st1->s);
 		at1 = (st1->t);
@@ -416,21 +459,25 @@ void R_DrawAliasModel ()
 				as2 += twidth;
 		}
 				
-#ifdef NDS
+		//glColor3b(c0,c0,c0);
 	//GFX_COLOR = d_8to16table[(((int)(&r_ptri[i]))>>3)&0xff];
+		DS_NORMAL(ds_normals[index0->lightnormalindex]);
 		DS_TEXCOORD2T16((as0),(at0));
 		DS_VERTEX3V16(ax0,ay0,az0);
 		
+		DS_NORMAL(ds_normals[index1->lightnormalindex]);
 		DS_TEXCOORD2T16((as1),(at1));
 		DS_VERTEX3V16(ax1,ay1,az1);
 		
+		DS_NORMAL(ds_normals[index2->lightnormalindex]);
 		DS_TEXCOORD2T16((as2),(at2));
 		DS_VERTEX3V16(ax2,ay2,az2);
-#endif
 	}
 #ifdef NDS
-	glEnd();
 	glPopMatrix (1);
+#else
+	glEnd();
+	glPopMatrix ();
 #endif
 
 #endif

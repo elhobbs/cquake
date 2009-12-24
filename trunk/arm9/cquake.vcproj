@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="C:\nds\cquake\arm9\include"
+				AdditionalIncludeDirectories=".\include"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -56,14 +56,14 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				AdditionalIncludeDirectories="C:\nds\cquake\arm9\include;C:\nds\cquake"
+				AdditionalIncludeDirectories="C:\devl\cquake\arm9\include;C:\devl\cquake"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="glaux.lib opengl32.lib WS2_32.Lib"
+				AdditionalDependencies="glu32.lib opengl32.lib WS2_32.Lib"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -662,6 +662,22 @@
 			</File>
 			<File
 				RelativePath=".\winquake.rc"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="win32"
+			>
+			<File
+				RelativePath="..\win32\glview.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\win32\GLWindow.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\win32\GLWindow.h"
 				>
 			</File>
 		</Filter>

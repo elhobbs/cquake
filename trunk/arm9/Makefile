@@ -25,7 +25,8 @@ include $(DEVKITARM)/ds_rules
 # all directories are relative to this makefile
 #---------------------------------------------------------------------------------
 BUILD		:=	build
-SOURCES		:=	profiler clock nullrender client console host misc network progs render server sound ../common
+SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
+#SOURCES		:=	profiler clock nullrender client console host misc network progs render server sound ../common
 #SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
 INCLUDES	:=	include ../common
 DATA		:=
@@ -56,7 +57,9 @@ LDFLAGS	=	-specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 #---------------------------------------------------------------------------------
 # any extra libraries we wish to link with the project
 #---------------------------------------------------------------------------------
-LIBS	:=  -lfat -lnds9 -ldswifi9 -lm
+#LIBS	:=   -ldswifi9 -lfat -lnds9d -lm
+#LIBS	:=  -lfat -ldswifi9 -lnds9 -lm
+LIBS	:=  -lfat -lnds9 -lm
  
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
