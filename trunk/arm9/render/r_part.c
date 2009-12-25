@@ -64,6 +64,8 @@ float	r_avertexnormals[NUMVERTEXNORMALS][3] = {
 #include "anorms.h"
 };
 int	ds_normals[NUMVERTEXNORMALS];
+extern float	turbsin[];
+int				*iturbsin;
 
 
 vec3_t	avelocities[NUMVERTEXNORMALS];
@@ -75,6 +77,7 @@ R_InitParticles
 void R_InitParticles (void)
 {
 	int		i;
+	float f;
 
 	i = COM_CheckParm ("-particles");
 
@@ -103,6 +106,11 @@ void R_InitParticles (void)
 							floattov10(r_avertexnormals[i][1]),
 							floattov10(r_avertexnormals[i][2])
 							);
+	}
+	iturbsin = (int *)turbsin;
+	for(i=0;i<256;i++) {
+		f = turbsin[i];
+		iturbsin[i] = f*(1<<4);
 	}
 }
 
