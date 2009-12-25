@@ -586,6 +586,7 @@ float	turbsin[] =
 {
 	#include "gl_warp_sin.h"
 };
+extern int				*iturbsin;
 //#define TURBSCALE (256.0 / (2 * M_PI))
 #define TURBSCALE 40
 
@@ -593,8 +594,8 @@ float speedscale;
 
 void EmitTurbPoly (msurface_t *fa)
 {
-	int			i,texnum,os,ot,ss,tt;
-	int			irealtime = realtime*8;
+	int			i,texnum,os,ot,ss,tt,is,it;
+	int			irealtime = realtime*256;
 	float		*vec;
 	medge_t		*pedges, *pedge;
 	texture_t *t;
@@ -649,8 +650,15 @@ void EmitTurbPoly (msurface_t *fa)
 			//tt = ot + turbsin[(int)(((os+irealtime)>>3) * TURBSCALE) & 255]*(1<<4);
 			//ss = os + turbsin[(int)((ot*0.125f+realtime) * TURBSCALE) & 255]*(1<<4);
 			//tt = ot + turbsin[(int)((os*0.125f+realtime) * TURBSCALE) & 255]*(1<<4);
-			ss = os + turbsin[(int)(((ot>>3)+realtime) * TURBSCALE) & 255]*(1<<4);
-			tt = ot + turbsin[(int)(((os>>3)+realtime) * TURBSCALE) & 255]*(1<<4);
+			
+			//is = (int)(((ot>>3)+realtime) * TURBSCALE) & 255;
+			//it = (int)(((os>>3)+realtime) * TURBSCALE) & 255;
+			is = (int)((((ot<<5)+irealtime) * TURBSCALE)>>8) & 255;
+			it = (int)((((os<<5)+irealtime) * TURBSCALE)>>8) & 255;
+			//ss = os + (int)(turbsin[is]*(1<<4));
+			//tt = ot + (int)(turbsin[it]*(1<<4));
+			ss = os + iturbsin[is];
+			tt = ot + iturbsin[it];
 
 		pts[i][3] = ss;
 		pts[i][4] = tt;
@@ -730,8 +738,8 @@ __int64 length;
 		dir[0] = (__int64)(dir[0]*6*31)/length;
 		dir[1] = (__int64)(dir[1]*6*31)/length;
 #endif
-		pts[i][3] = (speedscale + (dir[0]));
-		pts[i][4] = (speedscale + (dir[1]));
+		pts[i][3] = (ispeedscale + (dir[0]));
+		pts[i][4] = (ispeedscale + (dir[1]));
 		pts[i][3] <<= 4;
 		pts[i][4] <<= 4;
 	}
