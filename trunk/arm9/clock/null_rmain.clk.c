@@ -826,7 +826,7 @@ extern uint32 ds_texture_pal;
 #ifdef NDS
 	glColor3b(232,232,232);
 	GFX_TEX_FORMAT = r_sky_bottom;
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 #endif
 #ifdef WIN32
 	DS_COLOR(28);
@@ -854,7 +854,7 @@ extern uint32 ds_texture_pal;
 #ifdef NDS
 	//glDisable(GL_BLEND);
 	//glColorTable(GL_RGB256,ds_texture_pal);
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 #endif
 
 #ifdef WIN32
@@ -873,7 +873,11 @@ void R_RenderSurface(msurface_t *fa) __attribute__((section(".itcm"), long_call)
 
 void R_RenderSurface(msurface_t *fa)
 {
+#if 1
+	int rad,dist,minlight;
+#else
 	float rad,dist,minlight;
+#endif
 	int i, n, lindex, lnumverts,x,y,w,h,scale,size, maps,sd,td,dst;
 	unsigned colr;
 	texture_t	*t;
@@ -961,6 +965,15 @@ void R_RenderSurface(msurface_t *fa)
 
 			if(numdynamic == 4)
 				break;
+#if 1
+			rad = cl_dlights[lnum].iradius;
+			dist = (DotProduct (cl_dlights[lnum].iorigin, fa->plane->inormal) -
+					fa->plane->idist)>>16;
+			rad -= abs(dist);
+			minlight = cl_dlights[lnum].minlight;
+			if (rad < minlight)
+				continue;
+#else
 			rad = cl_dlights[lnum].radius;
 			dist = DotProduct (cl_dlights[lnum].origin, fa->plane->normal) -
 					fa->plane->dist;
@@ -968,12 +981,18 @@ void R_RenderSurface(msurface_t *fa)
 			minlight = cl_dlights[lnum].minlight;
 			if (rad < minlight)
 				continue;
+#endif
 			minlight = rad - minlight;
 
 			for (i=0 ; i<3 ; i++)
 			{
+#if 1
+				dynamic[i] = (cl_dlights[lnum].iorigin[i] -
+						((fa->plane->inormal[i]*dist)>>16)) * (1<<2);
+#else
 				dynamic[i] = (cl_dlights[lnum].origin[i] -
 						fa->plane->normal[i]*dist) * (1<<2);
+#endif
 			}
 
 			x = CALC_COORD (dynamic, u);
@@ -1263,7 +1282,7 @@ void R_RenderWorld(void)
 	ent.model = cl.worldmodel;
 
 #ifdef NDS
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
 	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
 #endif
@@ -1481,7 +1500,7 @@ void R_DrawBrushModel (entity_t *e)
 	qboolean	rotated;
 
 #ifdef NDS
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
 	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
 #endif
@@ -1536,7 +1555,7 @@ void R_DrawBrushModel (entity_t *e)
 		for (k=0 ; k<MAX_DLIGHTS ; k++)
 		{
 			if ((cl_dlights[k].die < cl.time) ||
-				(!cl_dlights[k].radius))
+				(!cl_dlights[k].iradius))
 				continue;
 
 			R_MarkLights (&cl_dlights[k], 1<<k,
@@ -1638,7 +1657,7 @@ void R_DrawSpriteModel ()
 	int i,texnum;
 
 #ifdef NDS
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
 	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
 	glColor3b(255,255,255);

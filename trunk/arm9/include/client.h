@@ -68,8 +68,10 @@ typedef struct
 #define	MAX_DLIGHTS		32
 typedef struct
 {
-	vec3_t	origin;
-	float	radius;
+	//vec3_t	origin;
+	//float	radius;
+	short	iorigin[3];
+	short	iradius;
 	float	die;				// stop lighting after this time
 	float	decay;				// drop this each second
 	float	minlight;			// don't add when contributing less
