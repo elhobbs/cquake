@@ -20,8 +20,8 @@ void Key_Event (int key, qboolean down);
 #define M_PI           3.14159265358979323846
 #endif
 
-#define DS_SCREEN_WIDTH 640
-#define DS_SCREEN_HEIGHT 480
+#define DS_SCREEN_WIDTH 1024
+#define DS_SCREEN_HEIGHT 768
 
 byte        scantokey[128] = 
 					{ 

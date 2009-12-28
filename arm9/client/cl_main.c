@@ -333,12 +333,16 @@ void CL_DecayLights (void)
 	dl = cl_dlights;
 	for (i=0 ; i<MAX_DLIGHTS ; i++, dl++)
 	{
-		if (dl->die < cl.time || !dl->radius)
+		if (dl->die < cl.time || !dl->iradius)
 			continue;
 		
-		dl->radius -= time*dl->decay;
-		if (dl->radius < 0)
-			dl->radius = 0;
+		//dl->radius -= time*dl->decay;
+		//if (dl->radius < 0)
+		//	dl->radius = 0;
+
+		dl->iradius -= time*dl->decay;
+		if (dl->iradius < 0)
+			dl->iradius = 0;
 	}
 }
 
@@ -503,8 +507,12 @@ void CL_RelinkEntities (void)
 			{
 				R_RocketTrail (oldorg, ent->origin, 0);
 				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin, dl->origin);
-				dl->radius = 200;
+				//VectorCopy (ent->origin, dl->origin);
+				//dl->radius = 200;
+				dl->iorigin[0] = ent->origin[0];
+				dl->iorigin[1] = ent->origin[1];
+				dl->iorigin[2] = ent->origin[2];
+				dl->iradius = 200;
 				dl->die = cl.time + 0.01;
 			}
 		}
@@ -516,15 +524,19 @@ void CL_RelinkEntities (void)
 
 			if (ent->effects & EF_MUZZLEFLASH)
 			{
-				vec3_t		fv, rv, uv;
+				vec3_t		fv, rv, uv,org;
 
 				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin,  dl->origin);
-				dl->origin[2] += 16;
+				VectorCopy (ent->origin,  org);
+				org[2] += 16;
 				AngleVectors (ent->angles, fv, rv, uv);
 				 
-				VectorMA (dl->origin, 18, fv, dl->origin);
-				dl->radius = 200 + (rand()&31);
+				VectorMA (org, 18, fv, org);
+				//dl->radius = 200 + (rand()&31);
+				dl->iorigin[0] = org[0];
+				dl->iorigin[1] = org[1];
+				dl->iorigin[2] = org[2];
+				dl->iradius = 200 + (rand()&31);
 				dl->minlight = 32;
 				dl->die = cl.time + 0.1;
 			}
@@ -532,17 +544,25 @@ void CL_RelinkEntities (void)
 			if (ent->effects & EF_BRIGHTLIGHT)
 			{			
 				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin,  dl->origin);
-				dl->origin[2] += 16;
-				dl->radius = 400 + (rand()&31);
+				//VectorCopy (ent->origin,  dl->origin);
+				//dl->origin[2] += 16;
+				//dl->radius = 400 + (rand()&31);
+				dl->iorigin[0] = ent->origin[0];
+				dl->iorigin[1] = ent->origin[1];
+				dl->iorigin[2] = ent->origin[2] + 16;
+				dl->iradius = 400 + (rand()&31);
 				dl->die = cl.time + 0.001;
 			}
 
 			if (ent->effects & EF_DIMLIGHT)
 			{			
 				dl = CL_AllocDlight (i);
-				VectorCopy (ent->origin,  dl->origin);
-				dl->radius = 200 + (rand()&31);
+				//VectorCopy (ent->origin,  dl->origin);
+				//dl->radius = 200 + (rand()&31);
+				dl->iorigin[0] = ent->origin[0];
+				dl->iorigin[1] = ent->origin[1];
+				dl->iorigin[2] = ent->origin[2];
+				dl->iradius = 200 + (rand()&31);
 				dl->die = cl.time + 0.001;
 			}
 		}

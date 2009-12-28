@@ -1391,7 +1391,7 @@ Wifi_InitDefault(true);
 	glClearPolyID(63); // BG must have a unique polygon ID for AA to work
 	//glClearDepth(0x7FFF);
 
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 	glCutoffDepth(0x7FFF);
 
 	Con_Printf("Initialing disk...");

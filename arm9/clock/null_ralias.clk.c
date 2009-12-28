@@ -203,10 +203,24 @@ void R_SetAliasFrame(aliashdr_t *paliashdr) {
 
 int R_LightPoint (vec3_t p);
 
+#ifdef NDS
+typedef long long big_int;
+#define NDS_INLINE static inline
+#else
+typedef __int64 big_int;
+#define NDS_INLINE static __forceinline
+#endif
+
+NDS_INLINE big_int mul64(big_int a,big_int b)
+{
+	return (a*b);
+}
+
 int ambientlight,shadelight;
 void ds_lightpoint(vec3_t p)
 {
 int lnum;
+big_int len,len2;
 float add;
 	vec3_t dist;
 
@@ -235,10 +249,25 @@ float add;
 	{
 		if (cl_dlights[lnum].die >= cl.time)
 		{
-			VectorSubtract (p,
-							cl_dlights[lnum].origin,
-							dist);
-			add = cl_dlights[lnum].radius - Length(dist);
+			dist[0] = (int)p[0] - cl_dlights[lnum].iorigin[0];
+			dist[1] = (int)p[1] - cl_dlights[lnum].iorigin[1];
+			dist[2] = (int)p[2] - cl_dlights[lnum].iorigin[2];
+
+			len = mul64(dist[0],dist[0]) + mul64(dist[1],dist[1]) + mul64(dist[2],dist[2]);
+			len2 = mul64(cl_dlights[lnum].iradius,cl_dlights[lnum].iradius);
+
+			if(len > len2)
+				continue;
+
+#ifdef NDS
+			len = sqrt32(len);
+#else
+			len = sqrt (len);
+#endif
+			add = cl_dlights[lnum].iradius - len;
+
+			//VectorSubtract (p, cl_dlights[lnum].origin,dist);
+			//add = cl_dlights[lnum].radius - Length(dist);
 
 			if (add > 0) {
 				ambientlight += add;
@@ -305,7 +334,7 @@ void R_DrawAliasModel ()
 	//fvec_t iw,ih;
 	
 #ifdef NDS
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | POLY_FORMAT_LIGHT0 | (1 << 13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | POLY_FORMAT_LIGHT0 | (1 << 13));
 #endif	
 
 	for(i=0;i<3;i++) {
@@ -561,11 +590,11 @@ void R_DrawViewModel (void)
 	//glLoadIdentity();
 #ifdef NDS
 	glRestoreMatrix(3);
+#endif
 	//glScalef(1,1,-1);
 	glRotateX(tempv1.value);
 	glRotateY(tempv2.value);
 	glRotateZ(tempv3.value);
-#endif
 	if (crosshair.value)
 	{
 		R_DrawCrosshair();
