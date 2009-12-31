@@ -59,6 +59,39 @@ int MapKey (int key)
 
 	return scantokey[key];
 }
+/*
+===========
+IN_MouseEvent
+===========
+*/
+void IN_MouseEvent (int mstate)
+{
+	static int mouse_oldbuttonstate = 0;
+	int	i;
+	int mouse_buttons = 3;
+
+	//if (mouseactive)
+	//{
+	// perform button actions
+		for (i=0 ; i<mouse_buttons ; i++)
+		{
+			if ( (mstate & (1<<i)) &&
+				!(mouse_oldbuttonstate & (1<<i)) )
+			{
+				Key_Event (K_MOUSE1 + i, true);
+			}
+
+			if ( !(mstate & (1<<i)) &&
+				(mouse_oldbuttonstate & (1<<i)) )
+			{
+				Key_Event (K_MOUSE1 + i, false);
+			}
+		}	
+			
+		mouse_oldbuttonstate = mstate;
+	//}
+}
+
 
 LRESULT CALLBACK WndProcGL(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -86,65 +119,29 @@ LRESULT CALLBACK WndProcGL(HWND hwnd, UINT iMsg, WPARAM wParam, LPARAM lParam)
 	case WM_SYSKEYUP:
 		Key_Event (MapKey(lParam), false);
 		break;
-	/*case WM_LBUTTONUP:
-		{
-			event_t ev;
+	// this is complicated because Win32 seems to pack multiple mouse events into
+	// one update sometimes, so we always check all states and look for events
+		case WM_LBUTTONDOWN:
+		case WM_LBUTTONUP:
+		case WM_RBUTTONDOWN:
+		case WM_RBUTTONUP:
+		case WM_MBUTTONDOWN:
+		case WM_MBUTTONUP:
+		case WM_MOUSEMOVE:
+			{
+			int temp = 0;
 
-			ev.type = ev_keyup;
-			ev.data1 = 256;
-			ev.data2 = ev.data3 = 0;
-			Input.PostEvent(&ev);
-		}
-		return 0;*/
-	case WM_LBUTTONDOWN:
-		return 0;
-	case WM_RBUTTONDOWN:
-		return 0;
-		/*
-	case WM_RBUTTONUP:
-		{
-			event_t ev;
+			if (wParam & MK_LBUTTON)
+				temp |= 1;
 
-			ev.type = ev_keyup;
-			ev.data1 = 257;
-			ev.data2 = ev.data3 = 0;
-			Input.PostEvent(&ev);
-		}
-		return 0;
-	case WM_RBUTTONDOWN:
-		{
-			event_t ev;
+			if (wParam & MK_RBUTTON)
+				temp |= 2;
 
-			ev.type = ev_keydown;
-			ev.data1 = 257;
-			ev.data2 = ev.data3 = 0;
-			Input.PostEvent(&ev);
-		}
-		return 0;*/
-	case WM_MOUSEMOVE:
-		return 0;
-		{
-			//event_t ev;
-			POINT pt,cent;
-			RECT rc;
+			if (wParam & MK_MBUTTON)
+				temp |= 4;
 
-			//GLWindow.GetPos(&rc);
-			GetWindowRect(hwnd,&rc);
-			pt.x = LOWORD(lParam);
-			pt.y = HIWORD(lParam);
-			ClientToScreen(hwnd,&pt);
-			cent.x = rc.left + ((rc.right - rc.left)>>1);
-			cent.y = rc.top + ((rc.bottom - rc.top)>>1);
-			if(cent.x == pt.x && cent.y == pt.y)
-				return 0;
-			SetCursorPos(cent.x,cent.y);
-			//ev.type = ev_mouse;
-			//ev.data1 = 0;
-			//ev.data2 = pt.x - cent.x;
-			//ev.data3 = pt.y - cent.y;
-			//Input.PostEvent(&ev);
-
-		}
+			IN_MouseEvent (temp);
+			}
 		return 0;
 	default:
 		break;
@@ -278,8 +275,13 @@ void glTranslate3f32(int x,int y, int z) {
 	glTranslatef(x/4096.0f,y/4096.0f,z/4096.0f);
 }
 
-void DS_COLOR(int c) {
-	glColor3f(c/31.0f,c/31.0f,c/31.0f);
+//#define RGB15(r,g,b)  ((r)|((g)<<5)|((b)<<10))
+void DS_COLOR(unsigned short c) {
+	float r,g,b;
+	r = c&31;
+	g = (c>>5)&31;
+	b = (c>>10)&31;
+	glColor3f(r/31.0f,g/31.0f,b/31.0f);
 }
 
 void DS_NORMAL(int n) {

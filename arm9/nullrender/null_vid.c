@@ -124,8 +124,60 @@ void	VID_InitPalette (unsigned char *palette)
 }
 
 #else
+unsigned short	d_8to16table[256];
+#define RGB15(r,g,b)  ((r)|((g)<<5)|((b)<<10))
 void	VID_InitPalette (unsigned char *palette)
 {
+	byte	*pal;
+	unsigned r,g,b;
+	unsigned short i;
+	unsigned short	v,*table;
+	static qboolean palflag = false;
+	float inf,gm = 1.1f;
+
+	//VID_LightmapPal();
+//
+// 8 8 8 encoding
+//
+	pal = palette;
+	table = d_8to16table;
+	for (i=0 ; i<256 ; i++)
+	{
+		r = pal[0];
+		g = pal[1];
+		b = pal[2];
+#if 1
+		inf = r;
+		inf = 255 * pow ( (inf+0.5)/255.5 , gm ) + 0.5;
+		if (inf < 0)
+			inf = 0;
+		if (inf > 255)
+			inf = 255;
+		r = inf;
+
+		inf = g;
+		inf = 255 * pow ( (inf+0.5)/255.5 , gm ) + 0.5;
+		if (inf < 0)
+			inf = 0;
+		if (inf > 255)
+			inf = 255;
+		g = inf;
+
+		inf = b;
+		inf = 255 * pow ( (inf+0.5)/255.5 , gm ) + 0.5;
+		if (inf < 0)
+			inf = 0;
+		if (inf > 255)
+			inf = 255;
+		b = inf;
+#endif
+		pal += 3;
+		
+		v = (1<<15)|RGB15(r>>3,g>>3,b>>3);
+		*table++ = v;
+	}
+	//d_8to16table[255] = d_8to16table[0];
+	//d_8to16table[255] &= 0xffffff;	// 255 is transparent
 }
 void	VID_SetPalette (unsigned char *palette)
 {

@@ -25,6 +25,7 @@ cvar_t	ds_crosshair_color = {"ds_crosshair_color", "0",true};
 cvar_t	ds_draw = {"ds_draw", "1"};
 cvar_t	ds_drawsky = {"ds_drawsky", "1"};
 cvar_t	ds_drawturb = {"ds_drawturb", "1"};
+cvar_t	ds_particles = {"ds_particles", "1"};
 
 #ifdef NDS
 #include "cyg-profile.h"
@@ -99,8 +100,8 @@ void	R_InitTextures (void)
 	}	
 	r_particle_mip = (texture_t*)Hunk_AllocName (sizeof(texture_t), "particle");
 	
-	r_particle_mip->width = r_notexture_mip->height = 8;
-	r_particle_mip->ds.width = r_notexture_mip->ds.height = 8;
+	r_particle_mip->width = r_particle_mip->height = 8;
+	r_particle_mip->ds.width = r_particle_mip->ds.height = 8;
 	r_particle_mip->ds.name = "particle";
 	
 	r_crosshair_mip = (texture_t*)Hunk_AllocName (sizeof(texture_t), "crosshair");
@@ -145,6 +146,7 @@ void R_Init (void)
 	Cvar_RegisterVariable (&ds_draw);
 	Cvar_RegisterVariable (&ds_drawsky);
 	Cvar_RegisterVariable (&ds_drawturb);
+	Cvar_RegisterVariable (&ds_particles);
 	//Cmd_AddCommand ("pointfile", R_ReadPointFile_f);	
 
 	/*Cvar_RegisterVariable (&r_norefresh);

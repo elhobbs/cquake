@@ -5,6 +5,7 @@
 #ifdef WIN32
 #include <windows.h>
 #include <gl\gl.h>
+#define RGB15(r,g,b)  ((r)|((g)<<5)|((b)<<10))
 #endif
 
 aliashdr_t		*r_aliashdr;
@@ -61,7 +62,6 @@ void R_SetAliasSkin(aliashdr_t *paliashdr) {
 	maliasskingroup_t	*paliasskingroup;
 	float				*pskinintervals, fullskininterval;
 	float				skintargettime, skintime;
-	int					skinnum;
 	int					numskins;
 	int					i;
 	int					texnum;
@@ -230,9 +230,9 @@ float add;
 	if (!strcmp (r_currentmodel->name, "progs/flame2.mdl")
 		|| !strcmp (r_currentmodel->name, "progs/flame.mdl") )
 	{
-#ifdef NDS
-		glColor3b(255,255,255);
+		DS_COLOR(RGB15(31,31,31));
 		ambientlight = shadelight = 255;
+#ifdef NDS
 		glMaterialf(GL_AMBIENT, RGB15(24,24,24));
 		glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
 #endif
@@ -294,22 +294,19 @@ float add;
 		if (ambientlight < 8)
 			ambientlight = shadelight = 8;
 */
-#ifdef NDS
 	glColor3b(shadelight,shadelight,shadelight);
+#ifdef NDS
 	glMaterialf(GL_AMBIENT, RGB8(ambientlight,ambientlight,ambientlight));
-	//glMaterialf(GL_AMBIENT, RGB8(8,8,8));
 	glMaterialf(GL_DIFFUSE, RGB8(shadelight,shadelight,shadelight));
 	glMaterialf(GL_SPECULAR, RGB8(shadelight,shadelight,shadelight));
 #endif
 
-	return;
 }
 
 	extern int r_alias_tri;
 void R_DrawAliasModel ()
 {
-	int			i,light,c0,c1,c2;
-	int c = shadelight - ambientlight;
+	int			i;
 	aliashdr_t	*paliashdr;
 	mdl_t 		*pmdl;
 	trivertx_t	*index0,*index1,*index2;
@@ -334,7 +331,7 @@ void R_DrawAliasModel ()
 	//fvec_t iw,ih;
 	
 #ifdef NDS
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | POLY_FORMAT_LIGHT0 | (1 << 13));
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(6) | POLY_FORMAT_LIGHT0 | (1 << 13));
 #endif	
 
 	for(i=0;i<3;i++) {
@@ -460,12 +457,6 @@ void R_DrawAliasModel ()
 		ax0 = index0->v[0];
 		ay0 = index0->v[1];
 		az0 = index0->v[2];
-		/*c0 = ambientlight;
-		c0 += ((ds_normals[index0->lightnormalindex][2]*c)>>14);
-		if(c0 < 0)
-			c0 = 0;
-		else if(c0 > 255)
-			c0 = 255;*/
 		
 		as1 = (st1->s);
 		at1 = (st1->t);
@@ -488,8 +479,7 @@ void R_DrawAliasModel ()
 				as2 += twidth;
 		}
 				
-		//glColor3b(c0,c0,c0);
-	//GFX_COLOR = d_8to16table[(((int)(&r_ptri[i]))>>3)&0xff];
+		//GFX_COLOR = d_8to16table[(((int)(&r_ptri[i]))>>3)&0xff];
 		DS_NORMAL(ds_normals[index0->lightnormalindex]);
 		DS_TEXCOORD2T16((as0),(at0));
 		DS_VERTEX3V16(ax0,ay0,az0);
@@ -520,13 +510,8 @@ extern cvar_t	crosshair;
 
 void R_DrawViewModel (void)
 {
-	float		ambient[4], diffuse[4];
-	int			j;
-	int			lnum;
-	vec3_t		dist;
-	float		add;
-	dlight_t	*dl;
-	int			ambientlight, shadelight;
+	//float		ambient[4], diffuse[4];
+	//int			ambientlight, shadelight;
 
 	//if (!r_drawviewmodel.value)
 	//	return;

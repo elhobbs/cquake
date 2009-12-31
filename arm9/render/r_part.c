@@ -22,7 +22,12 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "r_local.h"
 #include "ds_textures.h"
 
+extern cvar_t	ds_particles;
+
 #ifdef WIN32
+#include <windows.h>
+#include <gl\gl.h>
+
 typedef short int v10;       /*!< \brief normal .10 fixed point, NOT USED FOR 10bit VERTEXES!!!*/
 #define floattov10(n)        ((n>.998) ? 0x1FF : ((v10)((n)*(1<<9)))) /*!< \brief convert float to v10 */
 #define NORMAL_PACK(x,y,z)   (((x) & 0x3FF) | (((y) & 0x3FF) << 10) | ((z) << 20)) /*!< \brief Pack 3 v10 normals into a 32bit value */
@@ -643,7 +648,12 @@ R_DrawParticles
 */
 extern	cvar_t	sv_gravity;
 #ifdef NDS
-void nds_vert3f(float x,float y,float z)
+#define NDS_INLINE static inline
+#else
+#define NDS_INLINE static __forceinline
+#endif
+
+NDS_INLINE void nds_vert3f(float x,float y,float z)
 {
 	int a = x*(1<<2);
 	int b = y*(1<<2);
@@ -651,7 +661,7 @@ void nds_vert3f(float x,float y,float z)
 		
 	DS_VERTEX3V16(a,b,c);
 }
-#endif
+
 int ds_load_particle_texture(dstex_t *ds);
 void R_DrawParticles (void)
 {
@@ -665,21 +675,21 @@ void R_DrawParticles (void)
 	float			frametime;
 	int a,b,c;
 	
-#ifdef NDS
 	vec3_t			up, right;
 	float			scale;
 	
-	//if(!r_draw.value)
-	//	return;
+	if(!ds_particles.value)
+		return;
 
 	//glBindTexture(GL_TEXTURE_2D, particle_texture);
 	i = ds_load_particle_texture(&r_particle_mip->ds);
+#ifdef NDS
 	GFX_TEX_FORMAT = i;
+#endif
 	glBegin (GL_TRIANGLES);
 
 	VectorScale (r_vup, 2.0, up);
 	VectorScale (r_vright, 2.0, right);
-#endif
 	frametime = cl.time - cl.oldtime;
 	time3 = frametime * 15;
 	time2 = frametime * 10; // 15;
@@ -716,6 +726,7 @@ void R_DrawParticles (void)
 		}
 
 #ifdef NDS
+#endif
 		// hack a scale up to keep particles from disapearing
 		scale = (p->org[0] - r_origin[0])*r_vpn[0] + (p->org[1] - r_origin[1])*r_vpn[1]
 			+ (p->org[2] - r_origin[2])*r_vpn[2];
@@ -726,7 +737,9 @@ void R_DrawParticles (void)
 			else
 				scale = 1 + scale * 0.004;
 			//glColor3ubv ((byte *)&d_8to24table[(int)p->color]);
-			GFX_COLOR = d_8to16table[(int)p->color];
+
+			DS_COLOR(d_8to16table[(int)p->color]);
+
 			//glTexCoord2f (0,0);
 			DS_TEXCOORD2T16(0,0);
 			nds_vert3f (p->org[0],p->org[1],p->org[2]);
@@ -737,7 +750,6 @@ void R_DrawParticles (void)
 			DS_TEXCOORD2T16(0,8<<4);
 			nds_vert3f (p->org[0] + right[0]*scale, p->org[1] + right[1]*scale, p->org[2] + right[2]*scale);
 		}
-#endif
 		p->org[0] += p->vel[0]*frametime;
 		p->org[1] += p->vel[1]*frametime;
 		p->org[2] += p->vel[2]*frametime;
@@ -797,7 +809,8 @@ void R_DrawParticles (void)
 	}
 
 #ifdef NDS
-	//glEnd ();
+#else
+	glEnd ();
 	//glBindTexture(GL_TEXTURE_2D, 0);
 #endif
 

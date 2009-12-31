@@ -38,6 +38,7 @@ int BoxOnPlaneSide (vec3_t emins, vec3_t emaxs, mplane_t *p);
 efrag_t		**lastlink;
 
 vec3_t		r_emins, r_emaxs;
+short		r_iemins[3], r_iemaxs[3];
 
 entity_t	*r_addent;
 
@@ -88,6 +89,23 @@ void R_RemoveEfrags (entity_t *ent)
 R_SplitEntityOnNode
 ===================
 */
+int QBoxOnPlaneSide (short *emins,short*emaxs, mplane_t *p);
+#define QBOX_ON_PLANE_SIDE(emins, emaxs, p)	\
+	(((p)->type < 3)?						\
+	(										\
+		(((p)->idist>>16) <= (emins)[(p)->type])?	\
+			1								\
+		:									\
+		(									\
+			(((p)->idist>>16) >= (emaxs)[(p)->type])?\
+				2							\
+			:								\
+				3							\
+		)									\
+	)										\
+	:										\
+		QBoxOnPlaneSide( (emins), (emaxs), (p)))
+
 void R_SplitEntityOnNode (mnode_t *node)
 {
 	efrag_t		*ef;
@@ -136,7 +154,8 @@ void R_SplitEntityOnNode (mnode_t *node)
 // NODE_MIXED
 
 	splitplane = node->plane;
-	sides = BOX_ON_PLANE_SIDE(r_emins, r_emaxs, splitplane);
+	//sides = BOX_ON_PLANE_SIDE(r_emins, r_emaxs, splitplane);
+	sides = QBOX_ON_PLANE_SIDE(r_iemins, r_iemaxs, splitplane);
 	
 	if (sides == 3)
 	{
@@ -171,6 +190,11 @@ void R_AddEfrags (entity_t *ent)
 		return;
 
 	r_addent = ent;
+
+	if(!strcmp (ent->model->name, "progs/flame.mdl") ) {
+		i = 0xDEADBEEF;
+	}
+	
 			
 	lastlink = &ent->efrag;
 	r_pefragtopnode = NULL;
@@ -181,6 +205,8 @@ void R_AddEfrags (entity_t *ent)
 	{
 		r_emins[i] = ent->origin[i] + entmodel->mins[i];
 		r_emaxs[i] = ent->origin[i] + entmodel->maxs[i];
+		r_iemins[i] = r_emins[i];
+		r_iemaxs[i] = r_emaxs[i];
 	}
 
 	model = (bmodel_t *)cl.worldmodel->cache.data;

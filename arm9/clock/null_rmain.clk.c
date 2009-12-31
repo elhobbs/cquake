@@ -6,6 +6,9 @@
 #include <gl\gl.h>
 
 extern int texnum_sky_top,texnum_sky_bottom;
+#ifdef WIN32
+#pragma warning(disable : 4305)     // MIPS
+#endif
 
 #endif
 
@@ -152,6 +155,7 @@ int QBoxOnPlaneSide (short *emins,short*emaxs, mplane_t *p)
 		return 3;
 	}*/
 
+
 // general case
 	switch (p->signbits)
 	{
@@ -284,11 +288,7 @@ Guaranteed to be called before the first refresh
 */
 void R_ViewChanged (vrect_t *pvrect, int lineadj, float aspect)
 {
-	float	pixelAspect;
-	float	screenAspect;
-	float	verticalFieldOfView;
-	float	xOrigin, yOrigin;
-	int		i, j;
+	int		i;
 	int		x, x2, y2, y, w, h, off;
 
 	//R_SetVrect (pvrect, &r_refdef.vrect, lineadj);
@@ -591,12 +591,16 @@ extern int				*iturbsin;
 #define TURBSCALE 40
 
 float speedscale;
+float speedscale2;
+
+#ifdef WIN32
+#define RGB15(r,g,b)  ((r)|((g)<<5)|((b)<<10))
+#endif
 
 void EmitTurbPoly (msurface_t *fa)
 {
 	int			i,texnum,os,ot,ss,tt,is,it;
 	int			irealtime = realtime*256;
-	float		*vec;
 	medge_t		*pedges, *pedge;
 	texture_t *t;
 	short	*v2;
@@ -663,11 +667,7 @@ void EmitTurbPoly (msurface_t *fa)
 		pts[i][3] = ss;
 		pts[i][4] = tt;
 	}
-#ifdef NDS
 	DS_COLOR(RGB15(28,28,28));
-#else
-	DS_COLOR(28);
-#endif
 	EmitPoly(fa,pts);
 
 }
@@ -699,19 +699,16 @@ EmitSkyPolys
 
 void EmitSkyPolys (msurface_t *fa,int pts[][5])
 {
-	medge_t		*pedges, *pedge;
-	short	*v0,*v1,*v2;
-	int i, n, lindex, lnumverts;
-	int	s0, t0, s1, t1, s2, t2;
+	int i, n, lnumverts;
 	int dir[3];
-	int ispeedscale = (int)speedscale;
+	int ispeedscale  = ((int)speedscale)<<4;
+	int ispeedscale2 = ((int)speedscale2)<<4;
 #ifdef NDS
 long long length;
 #else
 __int64 length;
 #endif
 
-	pedges = r_currentbmodel->edges;
 	lnumverts = fa->numedges;
 	n = fa->firstedge;
 
@@ -738,29 +735,67 @@ __int64 length;
 		dir[0] = (__int64)(dir[0]*6*31)/length;
 		dir[1] = (__int64)(dir[1]*6*31)/length;
 #endif
-		pts[i][3] = (ispeedscale + (dir[0]));
-		pts[i][4] = (ispeedscale + (dir[1]));
+		pts[i][3] = (dir[0]);
+		pts[i][4] = (dir[1]);
+		//pts[i][3] = (ispeedscale + (dir[0]));
+		//pts[i][4] = (ispeedscale + (dir[1]));
 		pts[i][3] <<= 4;
 		pts[i][4] <<= 4;
 	}
 	
 	//if(r_draw.value)
 	//{
-		glBegin(GL_TRIANGLES);
 		for(i=2;i<lnumverts;i++)
 		{
-			DS_TEXCOORD2T16(pts[0][3],pts[0][4]);
+#ifdef NDS
+			GFX_TEX_FORMAT = r_sky_bottom;
+			glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(3) | (1<<13));
+#endif
+#ifdef WIN32
+			glBindTexture(GL_TEXTURE_2D,texnum_sky_bottom);
+#endif
+			glBegin(GL_TRIANGLES);
+			DS_TEXCOORD2T16(pts[0][3]+ispeedscale,pts[0][4]+ispeedscale);
 			DS_VERTEX3V16(pts[0][0],pts[0][1],pts[0][2]);
 
-			DS_TEXCOORD2T16(pts[i-1][3],pts[i-1][4]);
+			DS_TEXCOORD2T16(pts[i-1][3]+ispeedscale,pts[i-1][4]+ispeedscale);
 			DS_VERTEX3V16(pts[i-1][0],pts[i-1][1],pts[i-1][2]);
 
-			DS_TEXCOORD2T16(pts[i][3],pts[i][4]);
+			DS_TEXCOORD2T16(pts[i][3]+ispeedscale,pts[i][4]+ispeedscale);
 			DS_VERTEX3V16(pts[i][0],pts[i][1],pts[i][2]);
-		}
 #ifndef NDS
 		glEnd();
 #endif
+#ifdef NDS
+			GFX_TEX_FORMAT = r_sky_top;
+			//glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (0<<11) | POLY_MODULATION);
+			//glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11) | (1<<13));
+			glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(3) | (1<<14) | (0<<11) | (1<<13));
+#endif
+#ifdef WIN32
+			glEnable (GL_BLEND);
+			glBindTexture(GL_TEXTURE_2D,texnum_sky_top);
+#endif
+			glBegin(GL_TRIANGLES);
+			DS_TEXCOORD2T16(pts[0][3]+ispeedscale2,pts[0][4]+ispeedscale2);
+			DS_VERTEX3V16(pts[0][0],pts[0][1],pts[0][2]);
+
+			DS_TEXCOORD2T16(pts[i-1][3]+ispeedscale2,pts[i-1][4]+ispeedscale2);
+			DS_VERTEX3V16(pts[i-1][0],pts[i-1][1],pts[i-1][2]);
+
+			DS_TEXCOORD2T16(pts[i][3]+ispeedscale2,pts[i][4]+ispeedscale2);
+			DS_VERTEX3V16(pts[i][0],pts[i][1],pts[i][2]);
+#ifndef NDS
+		glEnd();
+#endif
+#ifdef NDS
+	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
+#endif
+
+#ifdef WIN32
+	glDisable(GL_BLEND);
+#endif
+		}
 
 	//}
 }
@@ -777,7 +812,6 @@ will have them chained together.
 void EmitBothSkyLayers (msurface_t *fa)
 {
 	int			i;
-	float		*vec;
 	medge_t		*pedges, *pedge;
 	short	*v2;
 	int n, lindex, lnumverts;
@@ -822,45 +856,11 @@ extern uint32 ds_texture_pal;
 	
 	speedscale = realtime*8;
 	speedscale -= (int)speedscale & ~63;
+	speedscale2 = realtime*16;
+	speedscale2 -= (int)speedscale2 & ~63;
 
-#ifdef NDS
-	glColor3b(232,232,232);
-	GFX_TEX_FORMAT = r_sky_bottom;
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
-#endif
-#ifdef WIN32
-	DS_COLOR(28);
-	glBindTexture(GL_TEXTURE_2D,texnum_sky_bottom);
-#endif
+	DS_COLOR(RGB15(28,28,28));
 	EmitSkyPolys (fa,pts);
-
-	speedscale = realtime*16;
-	speedscale -= (int)speedscale & ~63;
-
-#ifdef NDS
-	//glEnable(GL_BLEND);
-	//glColorTable(GL_RGB32_A3,ds_alpha_pal);
-	GFX_TEX_FORMAT = r_sky_top;
-	//glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (0<<11) | POLY_MODULATION);
-	//glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11) | (1<<13));
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (0<<11) | (1<<13));
-#endif
-#ifdef WIN32
-	glEnable (GL_BLEND);
-	DS_COLOR(28);
-	glBindTexture(GL_TEXTURE_2D,texnum_sky_top);
-#endif
-	EmitSkyPolys (fa,pts);
-#ifdef NDS
-	//glDisable(GL_BLEND);
-	//glColorTable(GL_RGB256,ds_texture_pal);
-	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
-#endif
-
-#ifdef WIN32
-	glDisable(GL_BLEND);
-#endif
-
 }
 
 #ifdef FIFI_SURF
@@ -891,16 +891,10 @@ void R_RenderSurface(msurface_t *fa)
 	int dynamic[3];
 	int dynamic2[4][4];
 	int			pts[64][6];
-	int dma_count;
 
 	if(ds_draw.value == 0)
 		return;
 
-#ifdef NDS2
-	glEnable(GL_BLEND);
-	//glColorTable(GL_RGB256,ds_texture_pal);
-	glPolyFmt(POLY_ALPHA(0) | POLY_CULL_FRONT | POLY_ID(1) | (1<<13));
-#endif
 	pedges = r_currentbmodel->edges;
 	lnumverts = fa->numedges;
 	n = fa->firstedge;
@@ -917,8 +911,6 @@ void R_RenderSurface(msurface_t *fa)
 	{
 		EmitTurbPoly(fa);
 		return;
-		//t = R_TextureAnimation (fa->texinfo->texture);
-		//texnum = ds_load_bsp_texture(r_currentmodel,t);
 	}
 	else
 	{
@@ -958,41 +950,29 @@ void R_RenderSurface(msurface_t *fa)
 	numdynamic = 0;
 	if (fa->dlightframe == r_framecount)
 	{
+		dlight_t *l;
 		for (lnum=0 ; lnum<MAX_DLIGHTS ; lnum++)
 		{
+			l = &cl_dlights[lnum];
+
 			if ( !(fa->dlightbits & (1<<lnum) ) )
 				continue;		// not lit by this light
 
 			if(numdynamic == 4)
 				break;
-#if 1
-			rad = cl_dlights[lnum].iradius;
-			dist = (DotProduct (cl_dlights[lnum].iorigin, fa->plane->inormal) -
-					fa->plane->idist)>>16;
+
+			rad = l->iradius;
+			dist = (DotProduct (l->iorigin, fa->plane->inormal) - fa->plane->idist)>>16;
 			rad -= abs(dist);
-			minlight = cl_dlights[lnum].minlight;
+			minlight = l->minlight;
 			if (rad < minlight)
 				continue;
-#else
-			rad = cl_dlights[lnum].radius;
-			dist = DotProduct (cl_dlights[lnum].origin, fa->plane->normal) -
-					fa->plane->dist;
-			rad -= fabs(dist);
-			minlight = cl_dlights[lnum].minlight;
-			if (rad < minlight)
-				continue;
-#endif
+
 			minlight = rad - minlight;
 
 			for (i=0 ; i<3 ; i++)
 			{
-#if 1
-				dynamic[i] = (cl_dlights[lnum].iorigin[i] -
-						((fa->plane->inormal[i]*dist)>>16)) * (1<<2);
-#else
-				dynamic[i] = (cl_dlights[lnum].origin[i] -
-						fa->plane->normal[i]*dist) * (1<<2);
-#endif
+				dynamic[i] = (l->iorigin[i] - ((fa->plane->inormal[i]*dist)>>16)) * (1<<2);
 			}
 
 			x = CALC_COORD (dynamic, u);
@@ -1011,7 +991,7 @@ void R_RenderSurface(msurface_t *fa)
 			numdynamic++;
 		}
 	}
-	
+
 	for (i=0 ; i<lnumverts ; i++)
 	{
 		lindex = r_currentbmodel->surfedges[n++];
@@ -1077,11 +1057,7 @@ void R_RenderSurface(msurface_t *fa)
 		colr>>=11;
 		if(colr > 31)
 			colr = 31;
-#ifdef NDS
 		pts[i][5] = RGB15(colr,colr,colr);
-#else
-		pts[i][5] = colr;
-#endif
 	}
 
 	if(r_draw.value)
@@ -1139,7 +1115,6 @@ void R_RecursiveWorldNode (mnode_t *node, int planeBits)
 {
 	int d;
 	int r;
-	int side;
 	mplane_t	*plane;
 	int c;
 	msurface_t	*surf, **mark;
@@ -1195,7 +1170,17 @@ void R_RecursiveWorldNode (mnode_t *node, int planeBits)
 				}
 			}
 
-		
+					/*plane = node->plane;
+					if (plane->type < 3)
+					{
+						d = r_origini[plane->type] - plane->idist;
+					}
+					else
+					{
+						d = IDotProduct (plane->inormal, r_origini) - plane->idist;
+					}
+					side = d > 0;*/
+
 		R_RecursiveWorldNode(node->children[0],planeBits);
 		
 		//tail recurse
@@ -1253,10 +1238,11 @@ void R_RecursiveWorldNode (mnode_t *node, int planeBits)
 		r_currentkey++;		// all bmodels in a leaf share the same key
 	}
 }
-
+/*
 void R_RenderLeaf(mleaf_t *pleaf) {
-	int c;
+	int c,d;
 	msurface_t	**mark,*surf;
+	mplane_t *plane;
 	if(pleaf == 0)
 		return;
 
@@ -1268,11 +1254,74 @@ void R_RenderLeaf(mleaf_t *pleaf) {
 		do
 		{
 			surf = *mark;
-			R_RenderSurface (surf);
+				if(surf->visframe != r_framecount)
+				{
+					surf->visframe = r_framecount;
+					plane = surf->plane;
+					if (plane->type < 3)
+					{
+						d = r_origini[plane->type] - plane->idist;
+					}
+					else
+					{
+						d = IDotProduct (plane->inormal, r_origini) - plane->idist;
+					}
+
+					if (((surf->flags & SURF_PLANEBACK) && (d < 0)) ||
+						(!(surf->flags & SURF_PLANEBACK) && (d > 0)))
+					{
+						R_RenderSurface(surf);
+					}
+					else
+					{
+						r_surf_cull++;
+					}
+				}
 			mark++;
 		} while (--c);
 	}
 }
+
+void R_RenderLeafs (void)
+{
+	mleaf_t *leaf;
+	int		i,r;
+		
+	for (i=0 ; i<r_currentbmodel->numleafs ; i++)
+	{
+		leaf = &r_currentbmodel->leafs[i+1];
+		if (leaf->visframe != r_visframecount)
+			continue;
+
+		r = QBoxOnPlaneSide(leaf->minmaxs, leaf->minmaxs+3, &r_frustum[0]);
+		if (r == 2)
+			continue;						// culled
+
+		r = QBoxOnPlaneSide(leaf->minmaxs, leaf->minmaxs+3, &r_frustum[1]);
+		if (r == 2)
+			continue;						// culled
+
+		r = QBoxOnPlaneSide(leaf->minmaxs, leaf->minmaxs+3, &r_frustum[2]);
+		if (r == 2)
+			continue;						// culled
+
+		r = QBoxOnPlaneSide(leaf->minmaxs, leaf->minmaxs+3, &r_frustum[3]);
+		if (r == 2)
+			continue;						// culled
+
+		R_RenderLeaf(leaf);
+		
+		// deal with model fragments in this leaf
+		if (leaf->efrags)
+		{
+			R_StoreEfrags (&leaf->efrags);
+		}
+
+		leaf->key = r_currentkey;
+		r_currentkey++;		// all bmodels in a leaf share the same key
+	}
+}
+*/
 
 void R_RenderWorld(void)
 {
@@ -1288,20 +1337,9 @@ void R_RenderWorld(void)
 #endif
 
 	r_currententity = &ent;
-	if(1)//r_draw.value)
-	{
-		R_RecursiveWorldNode (r_currentbmodel->nodes, 15);
-	}
-	else
-	{
-		Con_DPrintf("leaf: %d\n",r_viewleaf - r_currentbmodel->leafs);
-		Con_DPrintf("pos: %d %d %d",r_origini[0]>>16,r_origini[1]>>16,r_origini[2]>>16);
-		Con_DPrintf("ang: %d %d %d",
-			(int)r_refdef.viewangles[0],
-			(int)r_refdef.viewangles[1],
-			(int)r_refdef.viewangles[2]);
-		R_RenderLeaf(r_viewleaf);
-	}
+
+	//R_RenderLeafs();
+	R_RecursiveWorldNode (r_currentbmodel->nodes, 15);
 }
 int SignbitsForPlane (mplane_t *out)
 {
@@ -1448,15 +1486,15 @@ int frameBegin();
 #ifdef NDS
 	glStoreMatrix(4);
 #endif
-#ifdef WIN32
+#if 0
 	{
 		GLfloat LightAmbient[]= { 0.5f, 0.5f, 0.5f, 1.0f }; 				// Ambient Light Values ( NEW )
 		GLfloat LightDiffuse[]= { 1.0f, 1.0f, 1.0f, 1.0f };				 // Diffuse Light Values ( NEW )
-		GLfloat LightPosition[]= { 0.0f, 0.0f, 2.0f, 1.0f };				 // Light Position ( NEW )
+		GLfloat LightPosition[]= { 0.0f, 0.0f, 0.0f, 1.0f };				 // Light Position ( NEW )
 
 		glLightfv(GL_LIGHT1, GL_AMBIENT, LightAmbient);				// Setup The Ambient Light
 		glLightfv(GL_LIGHT1, GL_DIFFUSE, LightDiffuse);				// Setup The Diffuse Light
-		glLightfv(GL_LIGHT1, GL_POSITION,r_origin);			// Position The Light
+		glLightfv(GL_LIGHT1, GL_POSITION,LightPosition);			// Position The Light
 		glEnable(GL_LIGHT1);							// Enable Light One
 	}
 #endif
@@ -1491,12 +1529,10 @@ int frameEnd();
 void R_MarkLights (dlight_t *light, int bit, mnode_t *node);
 void R_DrawBrushModel (entity_t *e)
 {
-	int			j, k;
+	int			k;
 	short		mins[3], maxs[3];
-	int			i, numsurfaces;
+	int			i;
 	msurface_t	*psurf;
-	float		dot;
-	mplane_t	*pplane;
 	qboolean	rotated;
 
 #ifdef NDS
@@ -1660,8 +1696,8 @@ void R_DrawSpriteModel ()
 	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
 	glMaterialf(GL_AMBIENT, RGB15(24,24,24));
 	glMaterialf(GL_DIFFUSE, RGB15(24,24,24));
-	glColor3b(255,255,255);
 #endif
+	DS_COLOR(RGB15(28,28,28));
 
 	// don't even bother culling, because it's just a single
 	// polygon without a surface cache
@@ -1702,17 +1738,6 @@ void R_DrawSpriteModel ()
 		right = r_vright;
 	}
 
-	//glColor3f (1,1,1);
-
-	//GL_DisableMultitexture();
-//r_currententity->angles[0] = -r_currententity->angles[0];	// stupid quake bug
-	//F_RotateForEntity (fcurrententity);
-//r_currententity->angles[0] = -r_currententity->angles[0];	// stupid quake bug
-
-	//DS_BindTexture( frame->ndstexnum);
-
-	//glEnable (GL_ALPHA_TEST);
-#ifdef NDS
 	glBegin (GL_QUADS);
 
 #define fv16(n)        (short)(((n) * (1<<2)))
@@ -1721,7 +1746,7 @@ void R_DrawSpriteModel ()
 	VectorMA(org, (frame->down), up, point);
 	VectorMA(point, (frame->left), right, point);
 	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
-	glVertex3v16 (fv16(point[0]),
+	DS_VERTEX3V16 (fv16(point[0]),
 		fv16(point[1]),
 		fv16(point[2]));
 
@@ -1729,7 +1754,7 @@ void R_DrawSpriteModel ()
 	VectorMA(org, (frame->up), up, point);
 	VectorMA(point, (frame->left), right, point);
 	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
-	glVertex3v16 (fv16(point[0]),
+	DS_VERTEX3V16 (fv16(point[0]),
 		fv16(point[1]),
 		fv16(point[2]));
 
@@ -1737,7 +1762,7 @@ void R_DrawSpriteModel ()
 	VectorMA(org, (frame->up), up, point);
 	VectorMA(point, (frame->right), right, point);
 	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
-	glVertex3v16 (fv16(point[0]),
+	DS_VERTEX3V16 (fv16(point[0]),
 		fv16(point[1]),
 		fv16(point[2]));
 
@@ -1745,14 +1770,12 @@ void R_DrawSpriteModel ()
 	VectorMA(org, (frame->down), up, point);
 	VectorMA(point, (frame->right), right, point);
 	//iprintf("%x %x %x\n",point[0]>>16,point[1]>>16,point[2]>>16);
-	glVertex3v16 (fv16(point[0]),
+	DS_VERTEX3V16 (fv16(point[0]),
 		fv16(point[1]),
 		fv16(point[2]));
 	
 	glEnd ();
-#endif
 
-	//glDisable (GL_ALPHA_TEST);
 }
 #endif
 
