@@ -7,6 +7,11 @@
 #define DS_TEXCOORD2T16(x, y) GFX_TEX_COORD = TEXTURE_PACK(x, y)
 #define DS_VERTEX3V16(x, y, z) GFX_VERTEX16 = (y << 16) | (x & 0xFFFF); GFX_VERTEX16 = ((unsigned int)(unsigned short)z)
 #endif
+
+#ifdef WIN32
+void DS_COLOR(unsigned short c);
+#endif
+
 /*
 banks A-D are broken into 64x64 chunks
 which makes 128 blocks

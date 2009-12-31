@@ -65,9 +65,28 @@ DYNAMIC LIGHTS
 #ifdef NDS
 typedef long long big_int;
 #define NDS_INLINE static inline
+NDS_INLINE big_int idiv64(big_int a,big_int b)
+{
+	REG_DIVCNT = DIV_64_64;
+	
+	while(REG_DIVCNT & DIV_BUSY);
+	
+	REG_DIV_NUMER = a<<16;
+	REG_DIV_DENOM = b;
+	
+	while(REG_DIVCNT & DIV_BUSY);
+	
+	return (REG_DIV_RESULT);
+}
+
 #else
 typedef __int64 big_int;
 #define NDS_INLINE static __forceinline
+NDS_INLINE big_int idiv64(big_int a,big_int b)
+{
+	return (a<<16)/b;
+}
+
 #endif
 
 NDS_INLINE big_int imul64(big_int a,big_int b)
@@ -78,11 +97,6 @@ NDS_INLINE big_int imul64(big_int a,big_int b)
 NDS_INLINE big_int mul64(big_int a,big_int b)
 {
 	return (a*b);
-}
-
-NDS_INLINE big_int idiv64(big_int a,big_int b)
-{
-	return (a<<16)/b;
 }
 
 #define IIDotProduct(x,y) (mul64(x[0],y[0])+mul64(x[1],y[1])+mul64(x[2],y[2]))
@@ -96,53 +110,61 @@ R_MarkLights
 void R_MarkLights (dlight_t *light, int bit, mnode_t *node)
 {
 	mplane_t	*splitplane;
-	float		dist;
+	//float		dist;
 	int idist;
 	msurface_t	*surf;
 	int			i;
 extern bmodel_t	*r_currentbmodel;
 	//bmodel_t *model;
-	
-	if (node == 0 || node->contents < 0)
-		return;
-
-	splitplane = node->plane;
-	//dist = DotProduct (light->origin, splitplane->normal) - splitplane->dist;
-	if (splitplane->type < 3)
-	{
-		idist = light->iorigin[splitplane->type] - (splitplane->idist>>16);
-	}
-	else
-	{
-		idist = (IIDotProduct (splitplane->inormal, light->iorigin) - splitplane->idist)>>16;
-	}
-	
-	if (idist > light->iradius)
-	{
-		R_MarkLights (light, bit, node->children[0]);
-		return;
-	}
-	if (idist < -light->iradius)
-	{
-		R_MarkLights (light, bit, node->children[1]);
-		return;
-	}
+	do {
 		
-// mark the polygons
-	//model = (bmodel_t *)cl.worldmodel->cache.data;
-	surf = r_currentbmodel->surfaces + node->firstsurface;
-	for (i=0 ; i<node->numsurfaces ; i++, surf++)
-	{
-		if (surf->dlightframe != r_dlightframecount)
-		{
-			surf->dlightbits = 0;
-			surf->dlightframe = r_dlightframecount;
-		}
-		surf->dlightbits |= bit;
-	}
+		if (node == 0 || node->contents < 0)
+			return;
 
-	R_MarkLights (light, bit, node->children[0]);
-	R_MarkLights (light, bit, node->children[1]);
+		splitplane = node->plane;
+		//dist = DotProduct (light->origin, splitplane->normal) - splitplane->dist;
+		if (splitplane->type < 3)
+		{
+			idist = light->iorigin[splitplane->type] - (splitplane->idist>>16);
+		}
+		else
+		{
+			idist = (IIDotProduct (splitplane->inormal, light->iorigin) - splitplane->idist)>>16;
+		}
+		
+		if (idist > light->iradius)
+		{
+			//R_MarkLights (light, bit, node->children[0]);
+			//return;
+			node = node->children[0];
+			continue;
+		}
+		if (idist < -light->iradius)
+		{
+			//R_MarkLights (light, bit, node->children[1]);
+			//return;
+			node = node->children[1];
+			continue;
+		}
+			
+	// mark the polygons
+		//model = (bmodel_t *)cl.worldmodel->cache.data;
+		surf = r_currentbmodel->surfaces + node->firstsurface;
+		for (i=0 ; i<node->numsurfaces ; i++, surf++)
+		{
+			if (surf->dlightframe != r_dlightframecount)
+			{
+				surf->dlightbits = 0;
+				surf->dlightframe = r_dlightframecount;
+			}
+			surf->dlightbits |= bit;
+		}
+
+		R_MarkLights (light, bit, node->children[0]);
+		//R_MarkLights (light, bit, node->children[1]);
+		node = node->children[1];
+	}while(1);
+
 }
 
 
@@ -163,7 +185,7 @@ extern bmodel_t	*r_currentbmodel;
 	l = cl_dlights;
 
 	//model = (bmodel_t *)cl.worldmodel->cache.data;
-	r_currentbmodel = (bmodel_t *)cl.worldmodel->cache.data;
+	r_currentbmodel = cl.worldmodel->bmodel;
 	for (i=0 ; i<MAX_DLIGHTS ; i++, l++)
 	{
 		if (l->die < cl.time || !l->iradius)
@@ -201,7 +223,7 @@ int RecursiveLightPoint_f (mnode_t	*node, int p1f, int p2f, int* p1, int* p2)
 	int			i,maps;
 	bmodel_t	*model;
 	int *u,*v;
-	int x,y,w,h,c,size,xs,ys,ss,tt;
+	int x,y,xs,ys,ss,tt;
 	msurface_t	*surf;
 	int pt[3];
 	int			r, ds, dt;
@@ -430,7 +452,7 @@ int RecursiveLightPoint(mnode_t *node, vec3_t start, vec3_t end)
 	mplane_t	*plane;
 	vec3_t		mid;
 	msurface_t	*surf;
-	int			s, t, ds, dt;
+	int			ds, dt;
 	int			i;
 	mtexinfo_t	*tex;
 	byte		*lightmap;
@@ -438,7 +460,7 @@ int RecursiveLightPoint(mnode_t *node, vec3_t start, vec3_t end)
 	int			maps;
 	bmodel_t	*model;
 	int *u,*v;
-	int x,y,w,h,c,size,xs,ys,ss,tt;
+	int x,y,xs,ys,ss,tt;
 	int pt[3];
 	if (node->contents < 0)
 		return -1;		// didn't hit anything
@@ -554,7 +576,7 @@ int R_LightPoint (vec3_t p)
 {
 	vec3_t		end;
 	int end2[3],p2[3];
-	int			i,r,r2;
+	int			i,r;
 	bmodel_t	*model = (bmodel_t *)cl.worldmodel->cache.data;
 	
 	if (!model->lightdata)

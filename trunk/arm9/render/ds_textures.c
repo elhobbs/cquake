@@ -627,7 +627,11 @@ int ds_loadTexture(dstex_t *ds,int w,int h,byte *buf,int trans)
 			r = host_basepal[addr[i]*3 + 0];
 			g = host_basepal[addr[i]*3 + 1];
 			b = host_basepal[addr[i]*3 + 2];
-			v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
+			if(trans) {
+				v = ((addr[i] == 0 ? 0 : 255)<<24) + (r<<0) + (g<<8) + (b<<16);
+			} else {
+				v = (255<<24) + (r<<0) + (g<<8) + (b<<16);
+			}
 			dest32[i] = v;
 		}
 		glTexImage2D (GL_TEXTURE_2D, 0, 4, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, dest32);
@@ -742,10 +746,17 @@ int ds_load_particle_texture(dstex_t *ds)
 	int handle, length, size, block, w, h;
 	byte *buf,*addr,*dst;
 
+#ifdef WIN32
+	ds_texture_width = ds->width*16.0f;
+	ds_texture_height = ds->height*16.0f;
+#endif
 
 	block = ds_is_texture_resident(ds);
 	if(block != -1)
 	{
+#ifdef WIN32
+		glBindTexture(GL_TEXTURE_2D,texnums[block]);
+#endif
 		ds_textures[block].visframe = r_framecount;
 		return ds_textures[block].texnum;
 	}
@@ -1215,10 +1226,18 @@ int ds_load_sprite_texture(model_t *mod,mspriteframe_t *pspriteframe)
 	
 	//return 0;
 
+#ifdef WIN32
+	ds_texture_width = pspriteframe->ds.width*16.0f;
+	ds_texture_height = pspriteframe->ds.height*16.0f;
+#endif
+
 	block = ds_is_texture_resident(&pspriteframe->ds);
 	if(block != -1)
 	{
 		ds_textures[block].visframe = r_framecount;
+#ifdef WIN32
+		glBindTexture(GL_TEXTURE_2D,texnums[block]);
+#endif
 		return ds_textures[block].texnum;
 	}
 	Con_DPrintf("%s %d %d\n",pspriteframe->ds.name,pspriteframe->ds.width,pspriteframe->ds.height);

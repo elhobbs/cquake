@@ -11,9 +11,30 @@
 #ifdef NDS
 typedef long long big_int;
 #define NDS_INLINE static inline
+
+NDS_INLINE big_int idiv64(big_int a,big_int b)
+{
+	REG_DIVCNT = DIV_64_64;
+	
+	while(REG_DIVCNT & DIV_BUSY);
+	
+	REG_DIV_NUMER = a<<16;
+	REG_DIV_DENOM = b;
+	
+	while(REG_DIVCNT & DIV_BUSY);
+	
+	return (REG_DIV_RESULT);
+}
+
 #else
 typedef __int64 big_int;
 #define NDS_INLINE static __forceinline
+
+NDS_INLINE big_int idiv64(big_int a,big_int b)
+{
+	return (a<<16)/b;
+}
+
 #endif
 
 NDS_INLINE big_int imul64(big_int a,big_int b)
@@ -21,10 +42,7 @@ NDS_INLINE big_int imul64(big_int a,big_int b)
 	return (a*b)>>16;
 }
 
-NDS_INLINE big_int idiv64(big_int a,big_int b)
-{
-	return (a<<16)/b;
-}
+
 
 #define IDotProduct(x,y) (imul64(x[0],y[0])+imul64(x[1],y[1])+imul64(x[2],y[2]))
 
@@ -41,7 +59,7 @@ void IVectorCopy (int* a, int* b)
 #define	SURFACE_CLIP_EPSILON	(0.03125f)
 #define	ISURFACE_CLIP_EPSILON	(2048L)
 
-extern particle_t	*active_particles, *free_particles;
+//extern particle_t	*active_particles, *free_particles;
 int SV_HullPointContents (hull_t *hull, int num, vec3_t p);
 
 int part_draw = 0;
