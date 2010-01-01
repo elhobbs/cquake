@@ -70,6 +70,9 @@ void CL_ClearState (void)
 // wipe the entire cl structure
 	memset (&cl, 0, sizeof(cl));
 
+	//hack to make palette reload
+	cl.prev_cshifts[0].percent = 50;
+
 	SZ_Clear (&cls.message);
 
 	CL_InitTEnts ();
