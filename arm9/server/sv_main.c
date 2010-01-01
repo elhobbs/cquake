@@ -1195,8 +1195,7 @@ void SV_SpawnServer (char *server)
 			ds_precache_bsp_textures(mod);
 		}
 	}
+
 	Con_Printf ("Server spawned.\n");
-	//show_overlay(false,false);
-	V_UpdatePalette ();
 }
 
