@@ -1197,6 +1197,25 @@ void quake_main (int argc, char **argv)
 }
 
 #ifdef NDS
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void systemErrorExit(int rc) { 
+   printf("exit with code %d\n",rc); 
+
+   while(1) { 
+      swiWaitForVBlank(); 
+      if (keysCurrent() & KEY_A) break; 
+   } 
+    
+} 
+
+#ifdef __cplusplus
+};
+#endif
+
 #if 0
 u32 getExceptionAddress( u32 opcodeAddress, u32 thumbState);
 static const char *registerNames[] =
@@ -1437,10 +1456,10 @@ extern "C" {
    { 
        
    } 
-   void __aeabi_atexit() 
-   { 
-       
-   } 
+   //void __aeabi_atexit() 
+   //{ 
+   //    
+   //} 
 }
 #endif
 

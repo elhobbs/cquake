@@ -447,6 +447,10 @@
 					RelativePath=".\sound\snd_mem.c"
 					>
 				</File>
+				<File
+					RelativePath=".\sound\snd_mix.c"
+					>
+				</File>
 			</Filter>
 		</Filter>
 		<Filter
