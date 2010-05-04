@@ -92,7 +92,7 @@ typedef struct
 	int		looping;		// where to loop, -1 = no looping
 	int		entnum;			// to allow overriding a specific sound
 	int		entchannel;		//
-	vec3_t	origin;			// origin of sound effect
+	int		origin[3];			// origin of sound effect
 	float	dist_mult;		// distance multiplier (attenuation/clipK)
 	int		master_vol;		// 0-255 master volume
 } channel_t;
