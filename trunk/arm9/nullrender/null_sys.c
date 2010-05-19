@@ -761,10 +761,26 @@ int Sys_IntTime (void)
 	return Sys_FloatTime()*32728.5;
 }
 #else
-double Sys_FloatTime (void);
+
+long long ds_time()
+{
+	static u16 last;
+	static long long t;
+	u16 time1 = TIMER1_DATA;
+	u16 time = TIMER2_DATA;
+	if(time < last) {
+		t += (1<<32);
+	}
+	last = time;
+	return (t + (time << 16) + time1);
+}
 int Sys_IntTime (void)
 {
-	return ((TIMER1_DATA*(1<<16))+TIMER0_DATA);
+	return ds_time();
+}
+double Sys_FloatTime (void)
+{
+	return ds_time()/11025.0;
 }
 #endif
 
@@ -1440,8 +1456,18 @@ Wifi_InitDefault(true);
 
 
 	//setup timer for Sys_FloatTime;
+#if 0
 	TIMER0_CR = TIMER_ENABLE|TIMER_DIV_1024;
 	TIMER1_CR = TIMER_ENABLE|TIMER_CASCADE;
+#else
+	TIMER_DATA(0) = 0x10000 - (0x1000000 / 11025) * 2;
+	TIMER_CR(0) = TIMER_ENABLE | TIMER_DIV_1;
+	TIMER_DATA(1) = 0;
+	TIMER_CR(1) = TIMER_ENABLE | TIMER_CASCADE | TIMER_DIV_1;
+	TIMER_DATA(2) = 0;
+	TIMER_CR(2) = TIMER_ENABLE | TIMER_CASCADE | TIMER_DIV_1;
+
+#endif
 	
 	
 	soundEnable();

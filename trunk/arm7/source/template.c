@@ -26,8 +26,11 @@ distribution.
 
 ---------------------------------------------------------------------------------*/
 #include <nds.h>
+#include <stdio.h>
 #include <dswifi7.h>
 //#include <maxmod7.h>
+#include "mp3dec.h"
+#include "mp3_shared.h"
 	
 
 
@@ -82,8 +85,15 @@ int main() {
 
 	irqEnable( IRQ_VBLANK | IRQ_VCOUNT | IRQ_NETWORK);   
 
+	mp3_init();
+
 	// Keep the ARM7 mostly idle
-	while (1) swiWaitForVBlank();
+	while (1) {
+	
+		mp3_process();
+		
+		swiWaitForVBlank();
+	}
 }
 
 

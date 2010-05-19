@@ -71,10 +71,6 @@ float		xscaleshrink, yscaleshrink;
 float		aliasxscale, aliasyscale, aliasxcenter, aliasycenter;
 
 #ifdef NDS
-double Sys_FloatTime (void)
-{
-	return ((TIMER1_DATA*(1<<16))+TIMER0_DATA)/32728.5;
-}
 
 void ds_rotate_x(float angle) {
 	int sine = sin(angle* (M_PI*2 / 360))*(1<<12);

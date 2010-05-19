@@ -23,6 +23,9 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #include "quakedef.h"
 #include "hash.h"
 
+extern mleaf_t		*r_viewleaf, *r_oldviewleaf;
+static qboolean	snd_ambient = 1;
+
 channel_t   channels[MAX_CHANNELS];
 int			total_channels;
 
@@ -40,6 +43,8 @@ cvar_t nosound = {"nosound", "0"};
 cvar_t precache = {"precache", "1"};
 cvar_t loadas8bit = {"loadas8bit", "1"};
 cvar_t _snd_mixahead = {"_snd_mixahead", "0.1", true};
+cvar_t ambient_level = {"ambient_level", "0.3"};
+cvar_t ambient_fade = {"ambient_fade", "100"};
 
 // pointer should go away
 volatile dma_t  *shm = 0;
@@ -54,11 +59,23 @@ vec3_t		listener_up;
 float		sound_nominal_clip_dist=1000.0;
  
 float sound_start;
+long long ds_sound_start;
+long long ds_time();
+
 int SND_SamplePos() {
+#ifdef NDS
+	static long long v;
+
+	v = (ds_time() - ds_sound_start);
+	
+	//Con_Printf("time: %d\n",(int)v);
+
+	return (int)v;
+#else
 	float tm = Sys_FloatTime()-sound_start;
 	int pos = tm * shm->speed;
-
 	return pos;
+#endif
 }
 
 void GetSoundtime(void)
@@ -137,6 +154,8 @@ void S_Init (void)
 	Cvar_RegisterVariable(&precache);
 	Cvar_RegisterVariable(&loadas8bit);
 	Cvar_RegisterVariable(&_snd_mixahead);
+	Cvar_RegisterVariable(&ambient_level);
+	Cvar_RegisterVariable(&ambient_fade);
 
 	if (host_parms.memsize < 0x800000)
 	{
@@ -156,33 +175,51 @@ void S_Init (void)
 	memset(shm->buffer,0,4*1024);
 	shm->buffer[4] = shm->buffer[5] = 0x7f;	// force a pop for debugging
 	
+	shm->channels = 1;
+	shm->samplebits = 8;
+	shm->speed = 11025;
+	shm->samples = 4096/2;
+
 	sound_start = Sys_FloatTime();
 #ifdef NDS
+	//timerStart(2,ClockDivider_1,timerFreqToTicks_1(11025),0);
+#if 0
+	TIMER_DATA(2) = 0;
+	TIMER_CR(2) = TIMER_DIV_256 | TIMER_ENABLE;
+#else
+	/*TIMER_DATA(2) = 0x10000 - (0x1000000 / shm->speed) * 2;
+	TIMER_CR(2) = TIMER_ENABLE | TIMER_DIV_1;
+	TIMER_DATA(3) = 0;
+	TIMER_CR(3) = TIMER_ENABLE | TIMER_CASCADE | TIMER_DIV_1;*/
+
+#endif
 	soundPlaySample(shm->buffer,
 		SoundFormat_8Bit,
-		4*1024,
+		4*1024/2,
 		11025,
 		127,
 		64,
 		true,
 		0);
+	ds_sound_start = ds_time();
 	//IPCFifoSendMultiAsync(FIFO_SUBSYSTEM_SOUND,1,(const u32 *)fsnd,sizeof(*fsnd)/sizeof(int));
 #endif
 
-	shm->channels = 1;
-	shm->samplebits = 8;
-	shm->speed = 11025;
-	shm->samples = 4096;
 	snd_initialized = true;
+	
 }
 
 void S_AmbientOff (void)
 {
+	snd_ambient = false;
 }
+
 
 void S_AmbientOn (void)
 {
+	snd_ambient = true;
 }
+
 
 void S_Shutdown (void)
 {
@@ -225,7 +262,11 @@ void S_TouchSound (char *name)
 
 void S_ClearBuffer (void)
 {
+	if (!snd_initialized || !shm || !shm->buffer)
+		return;
+	Q_memset(shm->buffer, 0x00, shm->samples * shm->samplebits/8);
 }
+
 #define SOUND_NOMINAL_CLIP_DISTANCE_MULT 0.001f
 
 int spatialise (int entnum, float fvol, float attenuation, vec3_t origin, int *ds_pan, int *ds_vol)
@@ -379,9 +420,9 @@ int ispatialise (fifo_sound_t *snd, int *ds_pan, int *ds_vol)
 	return 1;
 }
 
-int iispatialise (int *origin,int dist_mult,int vol, int *ds_pan, int *ds_vol)
+int iispatialise (int *origin,int dist_mult,int vol, int *lvol, int *rvol)
 {
-	int master_v = (vol)>>16;
+	int master_v = vol;
 	int diff;
 	
 	int leftvol = (int)master_v;
@@ -431,6 +472,9 @@ int iispatialise (int *origin,int dist_mult,int vol, int *ds_pan, int *ds_vol)
 		
 		if (leftvol < 0)
 			leftvol = 0;
+
+		*lvol = leftvol;
+		*rvol = rightvol;
 			
 //		printf("l %d, r %d\n", leftvol, rightvol);
 			
@@ -439,9 +483,9 @@ int iispatialise (int *origin,int dist_mult,int vol, int *ds_pan, int *ds_vol)
 	}
 	
 	diff = (leftvol - rightvol) >> 3;
-	*ds_pan = 64 - diff;
+	//*ds_pan = 64 - diff;
 	
-	*ds_vol = (leftvol + rightvol) >> 2;
+	//*ds_vol = (leftvol + rightvol) >> 1;
 	
 	return 1;
 }
@@ -537,7 +581,7 @@ void S_StaticSound (sfx_t *sfx, vec3_t origin, float fvol, float attenuation)
 	ss->origin[1] = (int)origin[1];
 	ss->origin[2] = (int)origin[2];
 	ss->dist_mult = ((int)(attenuation*(1<<(16-6))) * FSOUND_NOMINAL_CLIP_DISTANCE_MULT)>>16;
-	ss->master_vol = (int)(fvol*(1<<16));
+	ss->master_vol = (int)fvol;
 	/*
 	if (!spatialise(-1, fvol * volume.value, attenuation, origin, &ds_pan, &ds_vol))
 		return;
@@ -611,7 +655,7 @@ void S_StartSound (int entnum, int entchannel, sfx_t *sfx, vec3_t origin, float 
 	target_chan->origin[1] = (int)origin[1];
 	target_chan->origin[2] = (int)origin[2];
 	target_chan->dist_mult = ((int)(attenuation*(1<<16)) * FSOUND_NOMINAL_CLIP_DISTANCE_MULT)>>16;
-	target_chan->master_vol = (int)(fvol*(1<<16))*255;
+	target_chan->master_vol = (int)(fvol*255);
 
 	fs.pan = ds_pan;
 	fs.volume = ds_vol;
@@ -646,22 +690,82 @@ void S_ClearPrecache (void)
 {
 }
 
+/*
+===================
+S_UpdateAmbientSounds
+===================
+*/
+void S_UpdateAmbientSounds (void)
+{
+	mleaf_t		*l;
+	float		vol;
+	int			ambient_channel;
+	channel_t	*chan;
+
+	if (!snd_ambient)
+		return;
+
+// calc ambient sound levels
+	if (!cl.worldmodel)
+		return;
+
+	l = r_viewleaf;//Mod_PointInLeaf (listener_origin, cl.worldmodel);
+	if (!l || !ambient_level.value)
+	{
+		for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
+			channels[ambient_channel].sfx = NULL;
+		return;
+	}
+
+	for (ambient_channel = 0 ; ambient_channel< NUM_AMBIENTS ; ambient_channel++)
+	{
+		chan = &channels[ambient_channel];	
+		chan->sfx = ambient_sfx[ambient_channel];
+	
+		vol = ambient_level.value * l->ambient_sound_level[ambient_channel];
+		if (vol < 8)
+			vol = 0;
+
+	// don't adjust volume too fast
+		if (chan->master_vol < vol)
+		{
+			chan->master_vol += host_frametime * ambient_fade.value;
+			if (chan->master_vol > vol)
+				chan->master_vol = vol;
+		}
+		else if (chan->master_vol > vol)
+		{
+			chan->master_vol -= host_frametime * ambient_fade.value;
+			if (chan->master_vol < vol)
+				chan->master_vol = vol;
+		}
+		
+		chan->leftvol = chan->rightvol = chan->master_vol;
+	}
+}
+
+
 void S_Update (vec3_t origin, vec3_t v_forward, vec3_t v_right, vec3_t v_up)
 {	
 	int			i, j;
 	int			total;
 	channel_t	*ch;
 	channel_t	*combine;
-	int ds_pan,ds_vol;
+	int leftvol,rightvol;
+	//int ds_pan,ds_vol;
 
 	if (nosound.value)
 		return;
 	if (!snd_initialized)
 		return;
+	
 	VectorCopy(origin, listener_origin);
 	VectorCopy(v_forward, listener_forward);
 	VectorCopy(v_right, listener_right);
 	VectorCopy(v_up, listener_up);
+
+// update general area ambient sound sources
+	S_UpdateAmbientSounds ();
 
 	combine = NULL;
 
@@ -671,10 +775,22 @@ void S_Update (vec3_t origin, vec3_t v_forward, vec3_t v_right, vec3_t v_up)
 	{
 		if (!ch->sfx)
 			continue;
-		if(!iispatialise(ch->origin,ch->dist_mult,ch->master_vol,&ds_pan,&ds_vol))         // respatialize channel
+	// anything coming from the view entity will allways be full volume
+		if (ch->entnum == cl.viewentity)
+		{
+			ch->leftvol = ch->master_vol;
+			ch->rightvol = ch->master_vol;
+		}
+		else if(!iispatialise(ch->origin,ch->dist_mult,ch->master_vol,&ch->leftvol,&ch->rightvol))         // respatialize channel
+		{
 			continue;
-		ch->leftvol = ds_vol;
-		ch->rightvol = ds_vol;
+		}
+		//else
+		//{
+		//	ch->leftvol = ds_vol;
+		//	ch->rightvol = ds_vol;
+		//}
+
 		if (!ch->leftvol && !ch->rightvol)
 			continue;
 
@@ -728,6 +844,10 @@ void S_StopAllSounds (qboolean clear)
 	for (i=0 ; i<MAX_CHANNELS ; i++)
 		if (channels[i].sfx)
 			channels[i].sfx = NULL;
+	for (i=0 ; i<NUM_AMBIENTS ; i++)
+		ambient_sfx[i] = 0;
+	S_ClearBuffer();
+	CDAudio_Stop();
 }
 
 void S_BeginPrecaching (void)
@@ -743,6 +863,7 @@ void S_ExtraUpdate (void)
 {
 	IN_Accumulate();
 	S_Update_();
+	CDAudio_Update();
 }
 
 void S_LocalSound (char *s)

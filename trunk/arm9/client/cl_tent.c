@@ -32,6 +32,7 @@ sfx_t	*cl_sfx_ric1;
 sfx_t	*cl_sfx_ric2;
 sfx_t	*cl_sfx_ric3;
 sfx_t	*cl_sfx_r_exp3;
+extern sfx_t		*ambient_sfx[NUM_AMBIENTS];
 
 model_t	*cl_beam_mod;
 model_t	*cl_bolt1_mod;
@@ -53,6 +54,8 @@ void CL_InitTEnts (void)
 	cl_sfx_ric3		= S_PrecacheSound ("weapons/ric3.wav");
 	cl_sfx_r_exp3	= S_PrecacheSound ("weapons/r_exp3.wav");
 
+	ambient_sfx[AMBIENT_WATER] = S_PrecacheSound ("ambience/water1.wav");
+	ambient_sfx[AMBIENT_SKY] = S_PrecacheSound ("ambience/wind2.wav");
 	//cl_beam_mod		= Mod_ForName ("progs/beam.mdl", true);
 	//cl_bolt1_mod	= Mod_ForName ("progs/bolt.mdl", true);
 	//cl_bolt2_mod	= Mod_ForName ("progs/bolt2.mdl", true);
