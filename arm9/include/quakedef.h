@@ -89,7 +89,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #ifdef USE_WIFI
 #define	MINIMUM_MEMORY			(3335*1024)
 #else
-#define	MINIMUM_MEMORY			(3495*1024)
+#define	MINIMUM_MEMORY			(3400*1024)
 #endif
 #define	MINIMUM_MEMORY_LEVELPAK	(MINIMUM_MEMORY + 0x100000)
 
