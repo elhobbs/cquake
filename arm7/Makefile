@@ -14,9 +14,10 @@ include $(DEVKITARM)/ds_rules
 # DATA is a list of directories containing binary files
 # all directories are relative to this makefile
 #---------------------------------------------------------------------------------
+HELIX		:=	../helix
 BUILD		:=	build
-SOURCES		:=	source ../common
-INCLUDES	:=	include build ../common
+SOURCES		:=	source ../common $(HELIX)/ds/arm7/source
+INCLUDES	:=	include build $(HELIX)/fixpt/pub $(HELIX)/ds/common/include
 DATA		:=
  
 #---------------------------------------------------------------------------------
@@ -29,7 +30,7 @@ CFLAGS	:=	-g -Wall -Os\
 		-ffast-math \
 		$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM7 
+CFLAGS	+=	$(INCLUDE) -DARM7 -DARM
 #CFLAGS  +=  -DUSE_WIFI
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions -fno-rtti
 
@@ -38,13 +39,13 @@ ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=ds_arm7.specs -g $(ARCH) -Wl,-Map,$(notdir $*).map
 
 #LIBS	:=	-lnds7 -ldswifi7
-LIBS	:=	-lnds7
+LIBS	:=	-lhelix -lnds7
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:=	$(LIBNDS)
+LIBDIRS	:=	$(LIBNDS) /c/devl/cquake/helix
  
   
 #---------------------------------------------------------------------------------

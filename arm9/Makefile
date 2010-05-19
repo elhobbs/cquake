@@ -24,11 +24,12 @@ include $(DEVKITARM)/ds_rules
 # DATA is a list of directories containing binary files
 # all directories are relative to this makefile
 #---------------------------------------------------------------------------------
+HELIX		:=	../helix
 BUILD		:=	build
-SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
+SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common $(HELIX)/ds/arm9/source
 #SOURCES		:=	profiler clock nullrender client console host misc network progs render server sound ../common
 #SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
-INCLUDES	:=	include ../common
+INCLUDES	:=	include ../common $(HELIX)/fixpt/pub   $(HELIX)/ds/common/include
 DATA		:=
 
 #---------------------------------------------------------------------------------
@@ -47,7 +48,7 @@ CFLAGS1	:=	-g -Wall -O0\
 			-ffast-math \
 			$(ARCH)
 
-CFLAGS	+=	$(INCLUDE) -DARM9 -DNDS -DBYTE_DEFINED 
+CFLAGS	+=	$(INCLUDE) -DARM9 -DNDS -DBYTE_DEFINED -DARM
 #CFLAGS  +=  -DUSE_WIFI
 CXXFLAGS	:=	$(CFLAGS) -fno-rtti -fno-exceptions
 
