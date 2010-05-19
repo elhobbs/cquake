@@ -910,11 +910,19 @@ void read_cquake_ini(quakeparms_t    *parms)
 #else
 	f = fopen("cquake.ini","r");
 #endif
+	if(f == 0) {
+#ifdef USE_WIFI
+		f = fopen("/cquake_mp.ini","r");
+#else
+		f = fopen("/cquake.ini","r");
+#endif
+	}
 	if(f)
 	{
 		cb = fread(&cmdLine[0],1,MAX_CMD_LINE,f);
 		fclose(f);
 	}
+	
 
 	parms->argc = 1;
 	argv[0] = empty_string;
