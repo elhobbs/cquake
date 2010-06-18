@@ -1392,7 +1392,7 @@ void Sys_Init()
 	bgSetPriority(ds_bg_main,1);
 	
 
-	for (y=0; y < 192; y++)
+	/*for (y=0; y < 192; y++)
 	{
 		for (x=0; x < 128; x++)
 		{
@@ -1403,7 +1403,7 @@ void Sys_Init()
 			//((u16*)BG_BMP_RAM(2))[y * 128 + x] = two_pixels;
 			((u16*)bgGetGfxPtr(ds_bg_main))[y * 128 + x] = two_pixels;
 		}
-	}
+	}*/
 	
 	ds_display_bottom_height = 192;
 	ds_display_menu = ds_display_bottom = (u16*)bgGetGfxPtr(ds_bg_main);

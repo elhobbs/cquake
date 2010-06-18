@@ -49,7 +49,8 @@ void mp3_print() {
 
 void mp3_fill_buffer() {
 	int n;
-	if(mp3->flag) {
+	//iprintf("in\n");
+	if(mp3 && mp3->flag) {
 		n = fread((void *)(mp3->buffer + MP3_FILE_BUFFER_SIZE), 1, MP3_FILE_BUFFER_SIZE, mp3->file);
 		filled += n;
 		if(mp3->loop && n < MP3_FILE_BUFFER_SIZE) {
@@ -59,6 +60,7 @@ void mp3_fill_buffer() {
 		}
 		mp3->flag = 0;
 	}
+	//iprintf("out\n");
 }
 
 void *uncached_malloc(size_t count) {
