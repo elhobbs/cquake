@@ -331,6 +331,7 @@ void mp3_set_volume(int volume) {
 	mp3_volume = volume;
 	
 	if(mp3_channel == -1) {
+		fifoSendValue32(FIFO_USER_01, 0);
 		return;
 	}
 	SCHANNEL_CR(mp3_channel) &= ~0xFF;
