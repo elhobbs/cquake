@@ -41,7 +41,7 @@ cvar_t		scr_showpause = {"showpause","1"};
 cvar_t		scr_showfps = {"showfps","1", true};
 cvar_t		scr_printspeed = {"scr_printspeed","8"};
 
-cvar_t		ds_flush = {"ds_flush","0",true};
+cvar_t		ds_flush = {"ds_flush","2",true};
 cvar_t		ds_hud_alpha = {"ds_hud_alpha","16",true};
 cvar_t		ds_clip_near = {"ds_clip_near","0.005",true};
 cvar_t		ds_clip_far = {"ds_clip_far","40",true};
