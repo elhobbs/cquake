@@ -162,11 +162,13 @@ void toggle_stdout_f(void)
 #ifdef NDS
 	if(show_stdout)
 	{
+		videoBgDisable(1);
 		REG_BG1CNT |= BG_PRIORITY_3;
 		show_stdout = 0;
 	}
 	else
 	{
+		videoBgEnable(1);
 		REG_BG1CNT &= (~BG_PRIORITY_3);
 		show_stdout = 1;
 	}
@@ -194,7 +196,9 @@ void Draw_Init (void)
 	vid.conheight = CON_SCREEN_HEIGHT;
 	vid.conwidth = CON_SCREEN_WIDTH;
 	vid.rowbytes = CON_SCREEN_WIDTH;
-	vid.conbuffer = vid.buffer = (pixel_t *)Hunk_AllocName(320*200,"vidbuf");
+	//vid.conbuffer = vid.buffer = (pixel_t *)Hunk_AllocName(320*200,"vidbuf");
+	vid.conbuffer = vid.buffer = (pixel_t *)Hunk_AllocName(SCREEN_WIDTH*SCREEN_HEIGHT+4,"vidbuf");
+	*((int *)(vid.buffer+SCREEN_WIDTH*SCREEN_HEIGHT)) = 0xDEADBEEF;
 	//vid.aliasbuffer = (pixel_t *)Hunk_AllocName(256*192,"aliasbuf");
 
 #ifdef NDS
@@ -203,6 +207,7 @@ void Draw_Init (void)
 
 	bgInit(1,BgType_Text8bpp,BgSize_T_256x256,14,0);
 	bgSetPriority(1,3);
+	videoBgDisable(1);
 	
 	ds_bg_text = bgInit(2,BgType_Text8bpp,BgSize_T_256x256,15,0);
 	bgSetPriority(2,0);
@@ -939,7 +944,7 @@ void Draw_TileClear (int x, int y, int w, int h)
 	}
 	else
 	{
-		memset(vid.buffer,0,320*200);
+		memset(vid.buffer,0,SCREEN_WIDTH*SCREEN_HEIGHT);//320*200);
 	}
 	return;
 

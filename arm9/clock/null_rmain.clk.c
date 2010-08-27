@@ -745,7 +745,7 @@ __int64 length;
 		{
 #ifdef NDS
 			GFX_TEX_FORMAT = r_sky_bottom;
-			glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(3) | (1<<13));
+			glPolyFmt(POLY_ALPHA(30) | POLY_CULL_FRONT | POLY_ID(7) | (1<<13));
 #endif
 #ifdef WIN32
 			glBindTexture(GL_TEXTURE_2D,texnum_sky_bottom);
@@ -766,7 +766,7 @@ __int64 length;
 			GFX_TEX_FORMAT = r_sky_top;
 			//glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(4) | (1<<14) | (0<<11) | POLY_MODULATION);
 			//glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(1) | (1<<14) | (1<<11) | (1<<13));
-			glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(3) | (1<<14) | (0<<11) | (1<<13));
+			glPolyFmt(POLY_ALPHA(16) | POLY_CULL_FRONT | POLY_ID(8) | (0<<14) | (1<<11) | (1<<13));
 #endif
 #ifdef WIN32
 			glEnable (GL_BLEND);
@@ -867,7 +867,52 @@ u32 dma_fifo[512] __attribute__ ((aligned (32)));
 void R_RenderSurface(msurface_t *fa) __attribute__((section(".itcm"), long_call));
 #endif
 
+#ifdef TEX_SORT
+void R_RenderSurface2(msurface_t *fa);
+
+void Render_TexSort() {
+	int texnum,i,n = r_currentbmodel->numtextures;
+	texture_t *t;
+	msurface_t *fa;
+
+	for(i=0;i<n;i++) {
+		t = r_currentbmodel->textures[i];
+		if(t && t->fa) {
+			texnum = ds_load_bsp_texture(r_currentmodel,t);
+#ifdef NDS
+			GFX_TEX_FORMAT = texnum;
+#endif
+			fa = t->fa;
+			while(fa)
+			{
+				R_RenderSurface2(fa);
+				fa = fa->fa;
+			}
+
+			t->fa = 0;
+		}
+	}
+}
+void R_RenderSurface(msurface_t *fa) {
+	texture_t *t;
+	if (fa->flags & SURF_DRAWSKY)
+	{
+		EmitBothSkyLayers(fa);
+		return;
+	}
+	else if(fa->flags & SURF_DRAWTURB)
+	{
+		EmitTurbPoly(fa);
+		return;
+	}
+	t = R_TextureAnimation (fa->texinfo->texture);
+	fa->fa = t->fa;
+	t->fa = fa;
+}
+void R_RenderSurface2(msurface_t *fa)
+#else
 void R_RenderSurface(msurface_t *fa)
+#endif
 {
 #if 1
 	int rad,dist,minlight;
@@ -898,6 +943,7 @@ void R_RenderSurface(msurface_t *fa)
 	if(lnumverts >= 64)
 		return;
 
+#ifndef TEX_SORT
 	if (fa->flags & SURF_DRAWSKY)
 	{
 		EmitBothSkyLayers(fa);
@@ -915,8 +961,6 @@ void R_RenderSurface(msurface_t *fa)
 		texnum = ds_load_bsp_texture(r_currentmodel,t);
 	}
 	r_surf_draw++;
-#ifdef NDS
-	//GFX_TEX_FORMAT = texnum;
 #endif
 
 	u = fa->texinfo->ivecs[0];
@@ -1058,8 +1102,10 @@ void R_RenderSurface(msurface_t *fa)
 
 	if(r_draw.value)
 	{
+#ifndef TEX_SORT
 #ifdef NDS
 		GFX_TEX_FORMAT = texnum;
+#endif
 #endif
 		glBegin(GL_TRIANGLES);
 
@@ -1336,6 +1382,9 @@ void R_RenderWorld(void)
 
 	//R_RenderLeafs();
 	R_RecursiveWorldNode (r_currentbmodel->nodes, 15);
+#ifdef TEX_SORT
+	Render_TexSort();
+#endif
 }
 int SignbitsForPlane (mplane_t *out)
 {
@@ -1527,9 +1576,10 @@ void R_DrawBrushModel (entity_t *e)
 {
 	int			k;
 	short		mins[3], maxs[3];
-	int			i;
+	int			i,texnum;
 	msurface_t	*psurf;
 	qboolean	rotated;
+	texture_t	*t;
 
 #ifdef NDS
 	glPolyFmt(POLY_ALPHA(31) | POLY_CULL_FRONT | POLY_ID(0) | (1<<13));
@@ -1618,7 +1668,29 @@ e->angles[0] = -e->angles[0];	// stupid quake bug
 			else
 				R_DrawSequentialPoly (psurf);
 		}*/
+#ifdef TEX_SORT
+		if (psurf->flags & SURF_DRAWSKY)
+		{
+			EmitBothSkyLayers(psurf);
+		}
+		else if(psurf->flags & SURF_DRAWTURB)
+		{
+			EmitTurbPoly(psurf);
+		}
+		else
+		{
+			t = R_TextureAnimation (psurf->texinfo->texture);
+			//DS_CacheSurface(fa,t);
+			texnum = ds_load_bsp_texture(r_currentmodel,t);
+#ifdef NDS
+			GFX_TEX_FORMAT = texnum;
+#endif
+			R_RenderSurface2(psurf);//F_DrawSuface(psurf);
+		}
+		r_surf_draw++;
+#else
 		R_RenderSurface(psurf);//F_DrawSuface(psurf);
+#endif
 	}
 
 	//R_BlendLightmaps ();

@@ -75,6 +75,8 @@ typedef struct dstex_s
 	int block;
 } dstex_t;
 
+#define TEX_SORT 1
+
 typedef struct texture_s
 {
 	dstex_t		ds;
@@ -83,6 +85,9 @@ typedef struct texture_s
 	int			anim_min, anim_max;		// time for this frame min <=time< max
 	struct texture_s *anim_next;		// in the animation sequence
 	struct texture_s *alternate_anims;	// bmodels in frmae 1 use these
+#ifdef TEX_SORT
+	struct msurface_s *fa;
+#endif
 	unsigned	offsets[MIPLEVELS];		// four mip maps stored
 } texture_t;
 
@@ -130,6 +135,9 @@ typedef struct msurface_s
 	
 // surface generation data
 	//struct surfcache_s	*cachespots[MIPLEVELS];
+#ifdef TEX_SORT
+	struct msurface_s *fa;
+#endif
 
 	short		texturemins[2];
 	short		extents[2];
