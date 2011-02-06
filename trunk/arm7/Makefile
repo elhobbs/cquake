@@ -16,7 +16,7 @@ include $(DEVKITARM)/ds_rules
 #---------------------------------------------------------------------------------
 HELIX		:=	../helix
 BUILD		:=	build
-SOURCES		:=	source ../common $(HELIX)/ds/arm7/source
+SOURCES		:=	source $(HELIX)/ds/arm7/source
 INCLUDES	:=	include build $(HELIX)/fixpt/pub $(HELIX)/ds/common/include
 DATA		:=
  

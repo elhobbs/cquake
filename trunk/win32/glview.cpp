@@ -233,6 +233,8 @@ int initDisplay()
 	glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
+	//glDisable(GL_TEXTURE_2D);
+
 	return 0;
 }
 

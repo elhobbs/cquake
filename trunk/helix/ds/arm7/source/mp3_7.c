@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <dswifi7.h>
+#include <malloc.h>
 #include <nds/fifocommon.h>
 #include <nds/fifomessages.h>
 #include "mp3dec.h"
@@ -28,7 +29,7 @@ DSTIME				soundtime;
 DSTIME   			paintedtime;
 
 vs32 mp3_debug = 0;
-u16 outbuf[OUTBUF_SIZE];
+u16 *outbuf = 0;//[OUTBUF_SIZE/2];
 
 DSTIME ds_time()
 {
@@ -217,6 +218,7 @@ void mp3_pause() {
 int mp3_resume() {
 
 	if(mp3 == 0 || mp3_channel != -1) {
+		mp3->debug = 42;
 		mp3_state = MP3_IDLE;
 		return 1;
 	}
@@ -244,21 +246,32 @@ int mp3_resume() {
 }
 
 int mp3_starting() {
+	int cb = OUTBUF_SIZE*sizeof(u16);
 	if(hMP3Decoder == 0) {
 		if ( (hMP3Decoder = MP3InitDecoder()) == 0 ) {
 			mp3_state = MP3_IDLE;
-			fifoSendValue32(FIFO_USER_01, 0);
+			fifoSendValue32(FIFO_USER_01, 1);
 			return 0;
 		}
 	}
 	
+	if(outbuf == 0) {
+		do {
+			outbuf = (u16 *)malloc(cb);
+			if(outbuf) {
+				break;
+			}
+			cb -= 128;
+		} while(cb > 0);
+	}
+		
 	mp3_bytesleft = mp3->filesize;
 	mp3_readPtr = mp3->buffer;
 	mp3_loop = mp3->loop;
 	
 	mp3_resume();
 
-	fifoSendValue32(FIFO_USER_01, 0);
+	fifoSendValue32(FIFO_USER_01, cb);
 	return 1;
 }
 
