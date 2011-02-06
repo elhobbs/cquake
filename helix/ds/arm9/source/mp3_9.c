@@ -7,6 +7,8 @@
 #include "mp3dec.h"
 #include "mp3_shared.h"
 
+void Con_Printf (char *fmt, ...);
+
 volatile mp3_player	*mp3;
 u8		*mp3_buffer;
 u16		*mp3_audio;
@@ -20,6 +22,7 @@ void dump_buffer() {
 	fclose(f);
 }
 
+
 void mp3_print() {
 	float ds_time;
 
@@ -29,15 +32,15 @@ void mp3_print() {
 	
 	ds_time = (float)mp3->soundtime/(float)(mp3->rate);
 
-	iprintf("filled: %d %d %d\n",filled,mp3->bytesleft,mp3->rate);
-	iprintf("time: %d %d\n",(int)mp3->soundtime,(int)(mp3->paintedtime-mp3->soundtime));
-	iprintf("painted: %d %d\n",(int)mp3->paintedtime,(int)mp3->painted);
-	//iprintf("state: %d\n",(int)mp3->state);
-	iprintf("buffer: %x %x %d\n",(unsigned)mp3->readPtr,(unsigned)mp3->buffer,mp3->bytesleft);
-	iprintf("decode: %d %d %d %d\n",mp3->decoded,mp3->painted,mp3->overflow,mp3->debug);
-	printf("time: %f\n",ds_time);
-	printf("lost: %d\n",mp3->lost);
-	printf("timer: %d\n",mp3->timer);
+	Con_Printf("filled: %d %d %d %x %d\n",filled,mp3->bytesleft,mp3->rate,mp3->file,mp3->filesize);
+	Con_Printf("time: %d %d\n",(int)mp3->soundtime,(int)(mp3->paintedtime-mp3->soundtime));
+	Con_Printf("painted: %d %d\n",(int)mp3->paintedtime,(int)mp3->painted);
+	//Con_Printf("state: %d\n",(int)mp3->state);
+	Con_Printf("buffer: %x %x %d\n",(unsigned)mp3->readPtr,(unsigned)mp3->buffer,mp3->bytesleft);
+	Con_Printf("decode: %d %d %d %d\n",mp3->decoded,mp3->painted,mp3->overflow,mp3->debug);
+	Con_Printf("time: %f\n",ds_time);
+	Con_Printf("lost: %d\n",mp3->lost);
+	Con_Printf("timer: %d\n",mp3->timer);
 	if(mp3->flag == 3) {
 		dump_buffer();
 		do {
@@ -50,6 +53,7 @@ void mp3_print() {
 void mp3_fill_buffer() {
 	int n;
 	//iprintf("in\n");
+	//mp3_print();
 	if(mp3 && mp3->flag) {
 		n = fread((void *)(mp3->buffer + MP3_FILE_BUFFER_SIZE), 1, MP3_FILE_BUFFER_SIZE, mp3->file);
 		filled += n;
@@ -84,6 +88,7 @@ int ds_filelength (FILE *f)
 int mp3_play_file(FILE *file,int loop){
 	
 	mp3_msg msg;
+	int ret = 0;
 		
 	if(mp3 == 0) {
 		return 1;
@@ -107,7 +112,11 @@ int mp3_play_file(FILE *file,int loop){
 
 	while(!fifoCheckValue32(FIFO_USER_01));
 
-	return (int)fifoGetValue32(FIFO_USER_01);
+	ret = (int)fifoGetValue32(FIFO_USER_01);
+	
+	//Con_Printf("mp3_play_file: %d %d\n",mp3->rate,ret);
+	
+	return ret;
 }
 
 int mp3_play(char *filename,int loop){
@@ -187,6 +196,8 @@ int mp3_init() {
 		mp3 = 0;
 		mp3_buffer = 0;
 		mp3_audio = 0;
+		Con_Printf("mp3 failed to allocate buffers\n");
+		while(1);
 		return 1;
 	}
 	

@@ -34,6 +34,7 @@ void CDAudio_Play(byte track, qboolean looping)
 	CDAudio_Stop();
 	
 	sprintf(name,"music/%02d.mp3",track);
+	//Con_Printf("MP3: music/%02d.mp3",track);
 	if(COM_FOpenFile(name,&file) == -1) {
 		return;
 	}

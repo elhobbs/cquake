@@ -26,7 +26,7 @@ include $(DEVKITARM)/ds_rules
 #---------------------------------------------------------------------------------
 HELIX		:=	../helix
 BUILD		:=	build
-SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common $(HELIX)/ds/arm9/source
+SOURCES		:=	clock nullrender client console host misc network progs render server sound $(HELIX)/ds/arm9/source
 #SOURCES		:=	profiler clock nullrender client console host misc network progs render server sound ../common
 #SOURCES		:=	clock nullrender client console host misc network progs render server sound ../common
 INCLUDES	:=	include ../common $(HELIX)/fixpt/pub   $(HELIX)/ds/common/include
