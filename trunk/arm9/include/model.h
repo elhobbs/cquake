@@ -315,6 +315,11 @@ typedef struct {
 	maliasframedesc_t	frames[1];
 } aliashdr_t;
 
+typedef struct {
+	cache_user_t	cache;		// only access through Mod_Extradata
+	aliashdr_t		hdr;
+} baliashdr_t;
+
 //===================================================================
 
 //
@@ -408,6 +413,7 @@ typedef struct model_s
 	union {
 	cache_user_t	cache;		// only access through Mod_Extradata
 	bmodel_t		*bmodel;
+	baliashdr_t		*baliashdr;
 	};
 
 } model_t;

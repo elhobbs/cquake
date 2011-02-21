@@ -5,7 +5,9 @@
 u16	d_8to16table[256];
 uint32 nextPBlock = (uint32)0;
 
-
+void glColorTable( uint8 format, uint32 addr ) {
+GFX_PAL_FORMAT = addr>>(4-(format==GL_RGB4));
+}
 //---------------------------------------------------------------------------------
 inline uint32 aalignVal( uint32 val, uint32 to ) {
 	return (val & (to-1))? (val & ~(to-1)) + to : val;
