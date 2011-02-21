@@ -368,7 +368,7 @@ int RecursiveLightPoint_f (mnode_t	*node, int p1f, int p2f, int* p1, int* p2)
 	pt[1] = mid[1]>>14;
 	pt[2] = mid[2]>>14;
 
-	model = (bmodel_t *)cl.worldmodel->cache.data;
+	model = cl.worldmodel->bmodel;
 	surf = model->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
@@ -494,7 +494,7 @@ int RecursiveLightPoint(mnode_t *node, vec3_t start, vec3_t end)
 	pt[2] = mid[2]*(1<<2);
 // check for impact on this node
 
-	model = (bmodel_t *)cl.worldmodel->cache.data;
+	model = cl.worldmodel->bmodel;
 	surf = model->surfaces + node->firstsurface;
 	for (i=0 ; i<node->numsurfaces ; i++, surf++)
 	{
@@ -577,7 +577,7 @@ int R_LightPoint (vec3_t p)
 	vec3_t		end;
 	int end2[3],p2[3];
 	int			i,r;
-	bmodel_t	*model = (bmodel_t *)cl.worldmodel->cache.data;
+	bmodel_t	*model = cl.worldmodel->bmodel;
 	
 	if (!model->lightdata)
 		return 255;

@@ -182,7 +182,7 @@ void R_ClearParticles (void);
 void R_NewMap (void)
 {
 	int		i;
-	bmodel_t *model = (bmodel_t *)cl.worldmodel->cache.data;
+	bmodel_t *model = cl.worldmodel->bmodel;
 	
 	for (i=0 ; i<256 ; i++)
 		d_lightstylevalue[i] = 264;		// normal light value

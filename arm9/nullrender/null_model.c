@@ -100,7 +100,7 @@ mleaf_t *Mod_PointInLeaf (vec3_t p, model_t *model)
 	mnode_t		*node;
 	float		d;
 	mplane_t	*plane;
-	bmodel_t *bmodel = (bmodel_t*)model->cache.data;
+	bmodel_t *bmodel = model->bmodel;
 	
 	if (!model || !bmodel || !bmodel->nodes)
 		Sys_Error ("Mod_PointInLeaf: bad model");
@@ -133,7 +133,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 	int		c;
 	byte	*out;
 	int		row;
-	bmodel_t *bmodel = (bmodel_t *)model->cache.data;
+	bmodel_t *bmodel = model->bmodel;
 
 	row = (bmodel->numleafs+7)>>3;	
 	out = decompressed;
@@ -170,7 +170,7 @@ byte *Mod_DecompressVis (byte *in, model_t *model)
 
 byte *Mod_LeafPVS (mleaf_t *leaf, model_t *model)
 {
-	bmodel_t *bmodel = (bmodel_t *)model->cache.data;
+	bmodel_t *bmodel = model->bmodel;
 	if (leaf == bmodel->leafs)
 		return mod_novis;
 	return Mod_DecompressVis (leaf->compressed_vis, model);
@@ -1396,7 +1396,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 	
 	loadmodel->type = mod_brush;
 	bloadmodel = (bmodel_t *)Hunk_AllocName ( sizeof(*bloadmodel), "bmodel");
-	mod->cache.data = bloadmodel;
+	mod->bmodel = bloadmodel;
 
 
 	//header = (dheader_t *)buffer;
@@ -1475,7 +1475,7 @@ void Mod_LoadBrushModel (model_t *mod, void *buffer)
 			bloadmodel = bmodel;
 			//strcpy (loadmodel->name, name);
 			mod = loadmodel;
-			mod->cache.data = bloadmodel;
+			mod->bmodel = bloadmodel;
 		}
 	}
 	Mod_DSTexinfo();

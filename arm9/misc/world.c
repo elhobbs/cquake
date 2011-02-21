@@ -157,7 +157,7 @@ hull_t *SV_HullForEntity (edict_t *ent, vec3_t mins, vec3_t maxs, vec3_t offset)
 		if (ent->v.movetype != MOVETYPE_PUSH)
 			Sys_Error ("SOLID_BSP without MOVETYPE_PUSH");
 
-		model = (bmodel_t *)sv.models[ (int)ent->v.modelindex ]->cache.data;
+		model = sv.models[ (int)ent->v.modelindex ]->bmodel;
 
 		if (!model || sv.models[ (int)ent->v.modelindex ]->type != mod_brush)
 			Sys_Error ("MOVETYPE_PUSH with a non bsp model");
@@ -415,7 +415,7 @@ void SV_FindTouchedLeafs (edict_t *ent, mnode_t *node)
 		if (ent->num_leafs == MAX_ENT_LEAFS)
 			return;
 
-		model = (bmodel_t*)sv.worldmodel->cache.data;
+		model = sv.worldmodel->bmodel;
 		leaf = (mleaf_t *)node;
 		leafnum = leaf - model->leafs - 1;
 
@@ -489,7 +489,7 @@ void SV_LinkEdict (edict_t *ent, qboolean touch_triggers)
 	ent->num_leafs = 0;
 	if (ent->v.modelindex)
 	{
-		model = (bmodel_t*)sv.worldmodel->cache.data;
+		model = sv.worldmodel->bmodel;
 		SV_FindTouchedLeafs (ent, model->nodes);
 	}
 
@@ -547,7 +547,7 @@ SV_PointContents
 int SV_PointContents (vec3_t p)
 {
 	int		cont;
-	bmodel_t *model = (bmodel_t*)sv.worldmodel->cache.data;
+	bmodel_t *model = sv.worldmodel->bmodel;
 
 	cont = SV_HullPointContents (&model->hulls[0], 0, p);
 	if (cont <= CONTENTS_CURRENT_0 && cont >= CONTENTS_CURRENT_DOWN)
@@ -557,7 +557,7 @@ int SV_PointContents (vec3_t p)
 
 int SV_TruePointContents (vec3_t p)
 {
-	bmodel_t *model = (bmodel_t*)sv.worldmodel->cache.data;
+	bmodel_t *model = sv.worldmodel->bmodel;
 	return SV_HullPointContents (&model->hulls[0], 0, p);
 }
 

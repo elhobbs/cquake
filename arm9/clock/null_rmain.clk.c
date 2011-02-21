@@ -1876,7 +1876,7 @@ void R_DrawEntitiesOnList (void)
 				break;
 
 			case mod_brush:
-				r_currentbmodel = (bmodel_t *)r_currentmodel->cache.data;
+				r_currentbmodel = r_currentmodel->bmodel;
 				R_DrawBrushModel (r_currententity);
 				break;
 
@@ -1902,7 +1902,7 @@ void R_DrawEntitiesOnList (void)
 			break;
 
 		case mod_brush:
-			r_currentbmodel = (bmodel_t *)r_currentmodel->cache.data;
+			r_currentbmodel = r_currentmodel->bmodel;
 			R_DrawBrushModel (r_currententity);
 			break;
 

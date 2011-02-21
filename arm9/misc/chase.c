@@ -50,7 +50,7 @@ void Chase_Reset (void)
 void TraceLine (vec3_t start, vec3_t end, vec3_t impact)
 {
 	trace_t	trace;
-	bmodel_t *bmod = (bmodel_t*)cl.worldmodel->cache.data;
+	bmodel_t *bmod = cl.worldmodel->bmodel;
 
 	memset (&trace, 0, sizeof(trace));
 	trace.fraction = 1.0;

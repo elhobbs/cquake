@@ -401,7 +401,7 @@ given point.
 */
 byte *SV_FatPVS (vec3_t org)
 {
-	bmodel_t *model = (bmodel_t*)sv.worldmodel->cache.data;
+	bmodel_t *model = sv.worldmodel->bmodel;
 	fatbytes = (model->numleafs+31)>>3;
 	Q_memset (fatpvs, 0, fatbytes);
 	SV_AddToFatPVS (org, model->nodes);
@@ -1132,7 +1132,7 @@ void SV_SpawnServer (char *server)
 
 	sv.model_precache[0] = pr_strings;
 	sv.model_precache[1] = sv.modelname;
-	model = (bmodel_t *)sv.worldmodel->cache.data;
+	model = sv.worldmodel->bmodel;
 	for (i=1 ; i<model->numsubmodels ; i++)
 	{
 		sv.model_precache[1+i] = localmodels[i];
@@ -1160,7 +1160,7 @@ void SV_SpawnServer (char *server)
 // serverflags are for cross level information (sigils)
 	pr_global_struct->serverflags = svs.serverflags;
 	
-	model = (bmodel_t *)sv.worldmodel->cache.data;
+	model = sv.worldmodel->bmodel;
 	ED_LoadFromFile (model->entities);
 #ifdef WIN32
 	if(model->entities) free(model->entities);
