@@ -300,7 +300,7 @@ u32 cluster;
 		sys_handles[hf].length = retval;
 		sys_handles[hf].start = 0;
 		sys_handles[hf].readonly = 1;
-#ifdef NDS
+#ifdef NDS2
 		sys_handles[hf].partition = _FAT_partition_getPartitionFromPath(path);
 		stat (path, &st); 
 		cluster = st.st_ino;
@@ -391,7 +391,7 @@ void Sys_FileSeek (int handle, int position)
 //	t = VID_ForceUnlockedAndReturnState ();
 	if(sys_handles[handle].readonly)
 	{
-#ifdef NDS
+#ifdef NDS2
 		sys_handles[handle].currentPosition = position+sys_handles[handle].start;
 #else
 		fseek (sys_handles[handle].fptr, position+sys_handles[handle].start, SEEK_SET);
@@ -475,7 +475,7 @@ int Sys_FileRead (int handle, void *dest, int count)
 	int tIME;
 
 	//	t = VID_ForceUnlockedAndReturnState ();
-#ifdef NDS
+#ifdef NDS2
 	x = nds_readFile(handle,dest,count);
 	//x = freadj (dest, 1, count, sys_handles[handle].fptr);
 #else
