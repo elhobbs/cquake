@@ -115,9 +115,18 @@ void R_SetAliasSkin(aliashdr_t *paliashdr) {
 	r_affinetridesc.seamfixupX16 =  (r_mdl->skinwidth >> 1);// << 16;
 	r_affinetridesc.skinheight = r_mdl->skinheight;
 #endif
+
 	twidth = pskindesc->ds.width;//>>1;
 	twidth <<= 3;//4;
-	texnum = ds_load_alias_texture(r_currentmodel,pskindesc);
+	if(!r_currentmodel->cache.data)
+	{
+		//since the creating a new skin name can push the model out of the cache
+		//we are going to let the model flash white for a frame rather than crashing
+		texnum = 0;
+		//Sys_Error("ds_load_alias_texture: unloaded model\n");
+	} else {
+		texnum = ds_load_alias_texture(r_currentmodel,pskindesc);
+	}
 #if 0
 		if(!r_currentmodel->cache.data)
 		{
@@ -307,8 +316,8 @@ float add;
 void R_DrawAliasModel ()
 {
 	int			i;
-	aliashdr_t	*paliashdr;
-	mdl_t 		*pmdl;
+	//aliashdr_t	*paliashdr;
+	//mdl_t 		*pmdl;
 	trivertx_t	*index0,*index1,*index2;
 	mstvert_t	*st0,*st1,*st2;
 
@@ -362,18 +371,18 @@ void R_DrawAliasModel ()
 	//
 	// locate the proper data
 	//
-	r_aliashdr = paliashdr = (aliashdr_t *)Mod_Extradata (r_currentmodel);
+	r_aliashdr = (aliashdr_t *)Mod_Extradata (r_currentmodel);
 	
 	//if(paliashdr->frames[r_currententity->frame].type ==0)
 	//	return;
 
-	r_mdl = pmdl = (mdl_t *)BYTE_OFFSET(paliashdr,paliashdr->model);
+	r_mdl = (mdl_t *)BYTE_OFFSET(r_aliashdr,r_aliashdr->model);
 		
 #define fdst16(n)		  ((int)((n) * (1 << 4)))
 	//twidth = fdst16(pmdl->skinwidth)>>1;
 	
 	
-	R_SetAliasSkin(paliashdr);
+	R_SetAliasSkin(r_aliashdr);
 
 	//since setting the skin may require loading the skin
 	//this may cause memory to be allocated which may cause the model
@@ -383,11 +392,11 @@ void R_DrawAliasModel ()
 
 	if(!r_currentmodel->cache.data)
 	{
-		r_aliashdr = paliashdr = (aliashdr_t *)Mod_Extradata (r_currentmodel);
-		r_mdl = pmdl = (mdl_t *)BYTE_OFFSET(paliashdr,paliashdr->model);
+		r_aliashdr = (aliashdr_t *)Mod_Extradata (r_currentmodel);
+		r_mdl = (mdl_t *)BYTE_OFFSET(r_aliashdr,r_aliashdr->model);
 	}
 	
-	R_SetAliasFrame(paliashdr);
+	R_SetAliasFrame(r_aliashdr);
 #if 0
 	if(pmdl->numtris <= 600)
 	{
@@ -425,12 +434,12 @@ void R_DrawAliasModel ()
 #ifdef WIN32
 #define floattof32(n)        ((int)((n) * (1 << 12))) /*!< \brief convert float to f32 */
 #endif
-		glTranslate3f32(floattodsv16(pmdl->scale_origin[0]),
-			floattodsv16(pmdl->scale_origin[1]),
-			floattodsv16(pmdl->scale_origin[2]));
-		glScale3f32(floattof32(pmdl->scale[0])<<2,
-			floattof32(pmdl->scale[1])<<2,
-			floattof32(pmdl->scale[2])<<2);
+		glTranslate3f32(floattodsv16(r_mdl->scale_origin[0]),
+			floattodsv16(r_mdl->scale_origin[1]),
+			floattodsv16(r_mdl->scale_origin[2]));
+		glScale3f32(floattof32(r_mdl->scale[0])<<2,
+			floattof32(r_mdl->scale[1])<<2,
+			floattof32(r_mdl->scale[2])<<2);
 //r_pverts = (trivertx_t*)(((u32)r_pverts) | 0x0400000);
 //r_pstverts = (mstvert_t*)(((u32)r_pstverts) | 0x0400000);
 //r_ptri = (mtriangle_t*)(((u32)r_ptri) | 0x0400000);
