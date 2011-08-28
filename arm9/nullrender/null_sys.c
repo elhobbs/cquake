@@ -1119,6 +1119,10 @@ void COM_AddGameDirectory (char *dir);
 	//while(1);
 }
 
+#ifdef ARM9
+extern bool __dsimode;
+#endif
+
 void quake_main (int argc, char **argv)
 {
 	float rotateX = 0.0;
@@ -1157,10 +1161,14 @@ void quake_main (int argc, char **argv)
 		Sys_Error("testmem finished\ndon't forget to remove -testmem from cquake.ini\n");
 	}
 
-	parms.memsize = MINIMUM_MEMORY;
-	if (COM_CheckParm ("-heapsize"))
+	if(__dsimode) {
+		parms.memsize = 14*1024*1024;
+	} else {
+		parms.memsize = MINIMUM_MEMORY;
+	}
+	if (COM_CheckParm ("-heapsize2"))
 	{
-		int t = COM_CheckParm("-heapsize") + 1;
+		int t = COM_CheckParm("-heapsize2") + 1;
 
 		if (t < com_argc)
 			parms.memsize = Q_atoi (com_argv[t]) * 1024;
