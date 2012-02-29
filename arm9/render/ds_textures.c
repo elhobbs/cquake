@@ -34,6 +34,8 @@
 #endif
 
 extern int		r_framecount;
+extern int		enable_texture_cache;
+byte			*temp_texture_cache;
 
 byte *DS_TEXTURE_BASE;
 byte *DS_TEXTURE_BASE2;
@@ -66,6 +68,9 @@ float ds_texture_height = 256.0f;
 
 int r_sky_top = 0, r_sky_bottom = 0;
 
+#ifdef NDS
+extern "C" void memcpy32(void *dst, const void *src, uint wdcount) ITCM_CODE;
+#endif
 
 int foo()
 {
@@ -170,6 +175,9 @@ void Init_DS_Textures()
 	memset(texnums3,0,sizeof(texnums3));
 #endif
 #endif
+	if(enable_texture_cache) {
+		temp_texture_cache = (byte *)malloc(256*256);
+	}
 }
 
 void ds_lock_block(int block)
@@ -458,7 +466,8 @@ byte* ds_scale_texture(dstex_t *tx,int inwidth,int inheight,byte *in,byte *outt)
 
 	if(inwidth == width && inheight == height)
 	{
-		return in;
+		memcpy(outt,in,inwidth*inheight);
+		return outt;
 	}
 
 	out = outt;
@@ -514,9 +523,10 @@ byte* ds_load_block(int block,byte *texture,int size)
 #ifdef WIN32
 	memcpy(addr,texture,size);
 #else
-	DC_FlushAll();
-	//DC_FlushRange((uint32*)texture, size);
-	dmaCopyWords(2,(uint32*)texture, (uint32*)addr , size);
+	//DC_FlushAll();
+	////DC_FlushRange((uint32*)texture, size);
+	//dmaCopyWords(2,(uint32*)texture, (uint32*)addr , size);
+	memcpy32(addr,texture,size/4);
 #endif
 	
 	ds_lock_block(block);
@@ -537,9 +547,10 @@ byte* ds_load_block2(int block,byte *texture,int size)
 #ifdef WIN32
 	memcpy(addr,texture,size);
 #else
-	DC_FlushAll();
-	//DC_FlushRange((uint32*)texture, size);
-	dmaCopyWords(2,(uint32*)texture, (uint32*)addr , size);
+	//DC_FlushAll();
+	////DC_FlushRange((uint32*)texture, size);
+	//dmaCopyWords(2,(uint32*)texture, (uint32*)addr , size);
+	memcpy32(addr,texture,size/4);
 #endif
 	
 	ds_lock_block2(block);
@@ -561,9 +572,10 @@ byte* ds_load_block3(int block,byte *texture,int size)
 #ifdef WIN32
 	memcpy(addr,texture,size);
 #else
-	DC_FlushAll();
-	//DC_FlushRange((uint32*)texture, size);
-	dmaCopyWords(3,(uint32*)texture, (uint32*)addr , size);
+	//DC_FlushAll();
+	////DC_FlushRange((uint32*)texture, size);
+	//dmaCopyWords(3,(uint32*)texture, (uint32*)addr , size);
+	memcpy32(addr,texture,size/4);
 #endif
 	
 	ds_lock_block3(block);
@@ -881,7 +893,7 @@ int ds_load_bsp_texture2(model_t *mod,texture_t *texture);
 
 int ds_load_bsp_texture(model_t *mod,texture_t *texture)
 {
-	int handle, length, size, block, w, h;
+	int handle, length, size, size_extra, block, w, h;
 	byte *buf,*addr,*dst;
 
 #ifdef WIN32
@@ -914,8 +926,82 @@ int ds_load_bsp_texture(model_t *mod,texture_t *texture)
 	}
 	else
 	{
+		cache_user_t *cache = (cache_user_t *)(enable_texture_cache == 0 ? 0 : (texture+1));
 		w = texture->ds.width;
 		h = texture->ds.height;
+		if(cache && cache->data) {
+			dst = (byte *)cache->data;
+		} else {
+			if(mod->name[0] == '*')
+			{
+				length = COM_OpenFile(cl.worldmodel->name,&handle);
+			}
+			else
+			{
+				length = COM_OpenFile(mod->name,&handle);
+			}
+			if(length == -1)
+			{
+				//Sys_Error ("Mod_NumForName: %s not found", mod->name);
+				return 0;
+			}
+			size_extra = (enable_texture_cache == 0 ? texture->ds.width*texture->ds.height : 0);
+			if(texture->width < 64 || texture->height < 64)
+			{
+				buf = COM_LoadTempFilePartExtra(handle,texture->ds.file_offset,size,size_extra);
+				COM_CloseFile(handle);
+				if(buf == 0)
+					return 0;
+				dst = (enable_texture_cache == 0 ? (buf + size) : temp_texture_cache);
+
+				dst = ds_scale_texture(&texture->ds,texture->width,texture->height,buf,dst);
+			}
+			else
+			{
+				buf = COM_LoadTempFilePartExtra(handle,texture->ds.file_offset+size,size>>2,size_extra);
+				COM_CloseFile(handle);
+				if(buf == 0)
+					return 0;
+				dst = (enable_texture_cache == 0 ? (buf + (size>>2)) : temp_texture_cache);
+				//dst = buf + (size>>2);
+
+				dst = ds_scale_texture(&texture->ds,texture->width>>1,texture->height>>1,buf,dst);
+			}
+			if(enable_texture_cache) {
+				byte *data = (byte *)Cache_Alloc(cache,w*h,"texcache");
+				memcpy(data,dst,w*h);
+			}
+		}
+	}
+
+	return ds_loadTexture(&texture->ds,w,h,dst,0);
+}
+
+int ds_load_bsp_texture2(model_t *mod,texture_t *texture)
+{
+	int handle, length, size, size_extra, block, w, h;
+	byte *buf,*addr,*dst;
+	cache_user_t *cache;
+
+	//return 0;
+	block = ds_is_texture_resident2(&texture->ds);
+	if(block != -1)
+	{
+#ifdef WIN32
+		glBindTexture(GL_TEXTURE_2D,texnums2[block]);
+#endif
+		ds_textures2[block].visframe = r_framecount;
+		return ds_textures2[block].texnum;
+	}
+	cache = (cache_user_t *)(enable_texture_cache == 0 ? 0 : (texture+1));
+	Con_DPrintf("%s %d %d\n",texture->ds.name,texture->ds.width,texture->ds.height);
+
+	w = texture->ds.width;
+	h = texture->ds.height;
+	size = texture->width * texture->height;
+	if(cache && cache->data) {
+		dst = (byte *)cache->data;
+	} else {
 		if(mod->name[0] == '*')
 		{
 			length = COM_OpenFile(cl.worldmodel->name,&handle);
@@ -929,72 +1015,20 @@ int ds_load_bsp_texture(model_t *mod,texture_t *texture)
 			//Sys_Error ("Mod_NumForName: %s not found", mod->name);
 			return 0;
 		}
-		if(texture->width < 64 || texture->height < 64)
-		{
-			buf = COM_LoadTempFilePartExtra(handle,texture->ds.file_offset,size,texture->ds.width*texture->ds.height);
-			COM_CloseFile(handle);
-			if(buf == 0)
-				return 0;
-			dst = buf + size;
+		size_extra = (enable_texture_cache == 0 ? w*h : 0);
+		buf = COM_LoadTempFilePartExtra(handle,texture->ds.file_offset,size,size_extra);
+		COM_CloseFile(handle);
 
-			dst = ds_scale_texture(&texture->ds,texture->width,texture->height,buf,dst);
-		}
-		else
-		{
-			buf = COM_LoadTempFilePartExtra(handle,texture->ds.file_offset+size,size>>2,texture->ds.width*texture->ds.height);
-			COM_CloseFile(handle);
-			if(buf == 0)
-				return 0;
-			dst = buf + (size>>2);
+		if(buf == 0)
+			return 0;
+		dst = (enable_texture_cache == 0 ? (buf + size) : temp_texture_cache);
 
-			dst = ds_scale_texture(&texture->ds,texture->width>>1,texture->height>>1,buf,dst);
+		dst = ds_scale_texture(&texture->ds,texture->width,texture->height,buf,dst);
+		if(enable_texture_cache) {
+			byte *data = (byte *)Cache_Alloc(cache,w*h,"texcache");
+			memcpy(data,dst,w*h);
 		}
 	}
-
-	return ds_loadTexture(&texture->ds,w,h,dst,0);
-}
-
-int ds_load_bsp_texture2(model_t *mod,texture_t *texture)
-{
-	int handle, length, size, block, w, h;
-	byte *buf,*addr,*dst;
-
-	//return 0;
-	block = ds_is_texture_resident2(&texture->ds);
-	if(block != -1)
-	{
-#ifdef WIN32
-		glBindTexture(GL_TEXTURE_2D,texnums2[block]);
-#endif
-		ds_textures2[block].visframe = r_framecount;
-		return ds_textures2[block].texnum;
-	}
-	Con_DPrintf("%s %d %d\n",texture->ds.name,texture->ds.width,texture->ds.height);
-
-	w = texture->ds.width;
-	h = texture->ds.height;
-	size = texture->width * texture->height;
-	if(mod->name[0] == '*')
-	{
-		length = COM_OpenFile(cl.worldmodel->name,&handle);
-	}
-	else
-	{
-		length = COM_OpenFile(mod->name,&handle);
-	}
-	if(length == -1)
-	{
-		//Sys_Error ("Mod_NumForName: %s not found", mod->name);
-		return 0;
-	}
-	buf = COM_LoadTempFilePartExtra(handle,texture->ds.file_offset,size,texture->ds.width*texture->ds.height);
-	COM_CloseFile(handle);
-
-	if(buf == 0)
-		return 0;
-	dst = buf + size;
-
-	dst = ds_scale_texture(&texture->ds,texture->width,texture->height,buf,dst);
 
 	return ds_loadTexture2(&texture->ds,w,h,dst);
 }

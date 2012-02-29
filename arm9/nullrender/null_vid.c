@@ -5,6 +5,9 @@
 u16	d_8to16table[256];
 uint32 nextPBlock = (uint32)0;
 
+extern "C" void memcpy32(void *dst, const void *src, uint wdcount) ITCM_CODE;
+
+
 void glColorTable( uint8 format, uint32 addr ) {
 GFX_PAL_FORMAT = addr>>(4-(format==GL_RGB4));
 }
@@ -34,8 +37,9 @@ int ndsgetNextPaletteSlot(u16 count, uint8 format) {
 void ndsTexLoadPalVRAM(const u16* pal, u16 count, u32 addr) {
 //---------------------------------------------------------------------------------
 	vramSetBankF(VRAM_F_LCD);
-	//swiCopy( pal, &VRAM_F[addr>>1] , count / 2 | COPY_MODE_WORD);
+	////swiCopy( pal, &VRAM_F[addr>>1] , count / 2 | COPY_MODE_WORD);
 	dmaCopyWords(3,(uint32*)pal, (uint32*)&VRAM_F[addr>>1] , count<<1);
+	//memcpy32(&VRAM_F[addr>>1],pal,count/2);
 	vramSetBankF(VRAM_F_TEX_PALETTE);
 }
 

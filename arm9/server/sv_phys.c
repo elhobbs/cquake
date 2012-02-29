@@ -673,7 +673,7 @@ void SV_CheckStuck (edict_t *ent)
 		return;
 	}
 
-#if 1
+#if 0
 	{
 	byte buf[32];
 	Con_Printf("SV_CheckStuck\n");
