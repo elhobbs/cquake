@@ -1123,6 +1123,8 @@ void COM_AddGameDirectory (char *dir);
 extern bool __dsimode;
 #endif
 
+int enable_texture_cache = 1;
+
 void quake_main (int argc, char **argv)
 {
 	float rotateX = 0.0;
@@ -1134,16 +1136,17 @@ void quake_main (int argc, char **argv)
 #ifdef NDS
 	unsigned amt = MINIMUM_MEMORY;//4*1024*1024;
 #else
-	unsigned amt = MINIMUM_MEMORY;
+	unsigned amt = 14*1024*1024;//MINIMUM_MEMORY;
 #endif
 	int frame = 0;
 
 #ifdef WIN32
 	parms.basedir = ".";
+	COM_InitArgv (argc, argv);
 #else
 	parms.basedir = "";
-#endif
 	read_cquake_ini(&parms);
+#endif
 
 	if (COM_CheckParm ("-testmem"))
 	{
@@ -1160,12 +1163,21 @@ void quake_main (int argc, char **argv)
 		iprintf("%d\n",(parms.memsize/1024)-16);
 		Sys_Error("testmem finished\ndon't forget to remove -testmem from cquake.ini\n");
 	}
-
+#ifdef NDS
 	if(__dsimode) {
 		parms.memsize = 14*1024*1024;
 	} else {
 		parms.memsize = MINIMUM_MEMORY;
+		enable_texture_cache = 0;
 	}
+#endif
+
+#ifdef WIN32
+	//parms.memsize = MINIMUM_MEMORY;
+	//enable_texture_cache = 0;
+	parms.memsize = 14*1024*1024;//MINIMUM_MEMORY;
+#endif
+
 	if (COM_CheckParm ("-heapsize2"))
 	{
 		int t = COM_CheckParm("-heapsize2") + 1;

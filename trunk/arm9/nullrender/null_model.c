@@ -35,6 +35,7 @@ char	loadname[32];	// for hunk tags
 int loadmodel_handle;
 
 texture_t *r_sky_texture;
+extern int enable_texture_cache;
 
 void Mod_LoadSpriteModel (model_t *mod, void *buffer);
 void Mod_LoadBrushModel (model_t *mod, void *buffer);
@@ -440,7 +441,11 @@ void Mod_LoadTextures (lump_t *l)
 			Sys_Error ("Texture %s is not 16 aligned", mt->name);
 		pixels = mt->width*mt->height/64*85;
 		//tx = Hunk_AllocName (sizeof(texture_t) +pixels, loadname );
-		tx = (texture_t*)Hunk_AllocName (sizeof(texture_t), loadname );
+		tx = (texture_t*)Hunk_AllocName (sizeof(texture_t) + (enable_texture_cache == 0 ? 0 : sizeof(cache_user_t)), loadname );
+		if(enable_texture_cache) {
+			cache_user_t *cache = (cache_user_t *)(tx+1);
+			cache->data = 0;
+		}
 		bloadmodel->textures[i] = tx;
 
 		//memcpy (tx->name, mt->name, sizeof(tx->name));
@@ -1838,7 +1843,7 @@ void Mod_LoadAliasModel (model_t *mod, void *buffer)
 	if (pmodel->numverts <= 0)
 		Sys_Error ("model %s has no vertices", mod->name);
 
-	if (pmodel->numverts > MAXALIASVERTS)
+	if (pmodel->numverts > 2*MAXALIASVERTS)
 		Sys_Error ("model %s has too many vertices", mod->name);
 
 	pmodel->numtris = LittleLong (pinmodel->numtris);
